@@ -1,0 +1,15 @@
+{
+  "query_type": "Engineering_and_Technology",
+  "plan": [
+    {
+      "step_number": 1,
+      "action": "Identify Key Advancements and Players",
+      "description": "Conduct a comprehensive search for recent (2023-2024) news, scientific publications, patent filings, and industry reports related to solid-state battery advancements. Focus on identifying major breakthroughs, key research institutions, prominent companies, and significant investment trends."
+    },
+    {
+      "step_number": 2,
+      "action": "Analyze Technical Details and Commercialization",
+      "description": "For the identified key advancements, delve into the specific technical details, including material science innovations (e.g., electrolyte, anode, cathode materials), manufacturing processes, performance metrics (e.g., energy density, cycle life, charging speed, safety), and remaining challenges. Investigate the commercialization status, pilot projects, and market projections for these technologies."
+    }
+  ]
+}

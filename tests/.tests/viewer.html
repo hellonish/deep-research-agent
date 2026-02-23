@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Research Report Viewer</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Highlight.js for code blocks -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <!-- External Libraries -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.1);
+            --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-serif: 'Georgia', serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            min-height: 100vh;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            background: var(--surface-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            font-weight: 500;
+        }
+
+        .summary-box {
+            background: #f1f5f9;
+            border-left: 4px solid var(--accent);
+            padding: 2rem;
+            margin-bottom: 4rem;
+            border-radius: 0 12px 12px 0;
+            color: #1e293b;
+            font-size: 1.15rem;
+        }
+
+        .summary-box h2 {
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+        }
+
+        .article-content {
+            font-family: var(--font-serif);
+            color: #1e293b;
+        }
+
+        /* Markdown Typography */
+        .article-content h1,
+        .article-content h2,
+        .article-content h3 {
+            font-family: var(--font-sans);
+            color: #0f172a;
+            margin-top: 2.5em;
+            margin-bottom: 1em;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .article-content h2 {
+            font-size: 1.8rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .article-content h3 {
+            font-size: 1.4rem;
+        }
+
+        .article-content p {
+            margin-bottom: 1.5em;
+        }
+
+        .article-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .article-content a:hover {
+            text-decoration: underline;
+        }
+
+        .article-content ul,
+        .article-content ol {
+            margin-bottom: 1.5em;
+            padding-left: 1.5em;
+        }
+
+        .article-content li {
+            margin-bottom: 0.5em;
+        }
+
+        .article-content code {
+            font-family: var(--font-mono);
+            background: #f1f5f9;
+            color: #db2777;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .article-content blockquote {
+            border-left: 4px solid var(--border-color);
+            margin: 1.5em 0;
+            padding-left: 1rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Interactive Citations */
+        .citation {
+            font-family: var(--font-sans);
+            font-size: 0.75em;
+            vertical-align: super;
+            line-height: 0;
+            color: var(--accent);
+            text-decoration: none;
+            padding: 0 2px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .citation:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        /* Tables */
+        .table-responsive {
+            overflow-x: auto;
+            margin: 2.5rem 0;
+            font-family: var(--font-sans);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #f1f5f9;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #0f172a !important;
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 2.5rem 0;
+            font-family: var(--font-mono);
+        }
+
+        pre code {
+            background: none !important;
+            color: #e2e8f0 !important;
+            padding: 0;
+            font-size: 0.9em;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            margin: 3rem 0;
+            padding: 1.5rem;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            font-family: var(--font-sans);
+        }
+
+        /* Source List */
+        .sources-section {
+            margin-top: 5rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--border-color);
+            font-family: var(--font-sans);
+        }
+
+        .source-item {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .source-item:target {
+            background: #eff6ff;
+            animation: highlight 2s ease-out;
+        }
+
+        @keyframes highlight {
+            0% {
+                background: #dbeafe;
+            }
+
+            100% {
+                background: transparent;
+            }
+        }
+
+        .source-id {
+            color: var(--text-muted);
+            font-weight: 600;
+            min-width: 30px;
+        }
+
+        /* System states */
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            font-family: var(--font-sans);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #ef4444;
+            background: #fee2e2;
+            padding: 2rem;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="app">
+        <div class="loader">
+            <div class="spinner"></div>
+            <div>Generating Report...</div>
+        </div>
+    </div>
+
+    <script>
+        marked.setOptions({
+            highlight: function (code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            breaks: true,
+            gfm: true
+        });
+
+        let globalSources = [];
+
+        function extractSources(report) {
+            globalSources = [];
+            (report.blocks || []).forEach(block => {
+                if (block.block_type === 'source_list' && block.sources) {
+                    globalSources = globalSources.concat(block.sources);
+                }
+            });
+        }
+
+        // Regex to convert [1], [2] to interactive inline links
+        function processCitations(html) {
+            return html.replace(/\[(\d+)\]/g, (match, p1) => {
+                const index = parseInt(p1) - 1;
+                if (index >= 0 && index < globalSources.length) {
+                    return `<a href="${globalSources[index]}" target="_blank" class="citation" title="${globalSources[index]}">[${p1}]</a>`;
+                }
+                return match;
+            });
+        }
+
+        async function loadReport() {
+            try {
+                const response = await fetch('results/test_orchestrator_result.json');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const report = await response.json();
+                renderReport(report);
+            } catch (e) {
+                document.getElementById('app').innerHTML = `
+                    <div class="error">
+                        <h2>⚠️ Failed to Load Report</h2>
+                        <p>Make sure you are running a local development server in the <code>tests/</code> directory.</p>
+                        <p>Command: <code>python -m http.server 8000</code></p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderReport(report) {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+
+            extractSources(report);
+
+            const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Header & Executive Summary
+            const headerHTML = `
+                <header>
+                    <h1>${report.title || 'Deep Research Report'}</h1>
+                    <div class="meta">
+                        <span>AI Synthesized Analysis</span>
+                        <span>•</span>
+                        <span>${dateStr}</span>
+                    </div>
+                </header>
+                <div class="summary-box">
+                    <h2>Executive Summary</h2>
+                    <div class="article-content">${marked.parse(report.summary || '')}</div>
+                </div>
+                <div class="article-content" id="blocks-container"></div>
+            `;
+            app.insertAdjacentHTML('beforeend', headerHTML);
+
+            const container = document.getElementById('blocks-container');
+            const chartsToRender = [];
+
+            // We will collect the sources separately to put them at the very end
+            let sourcesHTML = '';
+
+            (report.blocks || []).forEach((block, index) => {
+                let contentHTML = '';
+
+                // Only render explicit block titles if they look like standalone section headers
+                // and it's not a source list
+                if (block.title && block.block_type !== 'source_list' && block.title.length < 60) {
+                    contentHTML += `<h3 style="margin-top: 2rem;">${block.title}</h3>`;
+                }
+
+                if (block.block_type === 'text') {
+                    let parsedHtml = marked.parse(block.markdown || '');
+                    contentHTML += processCitations(parsedHtml);
+                }
+                else if (block.block_type === 'table') {
+                    let tableHTML = `<div class="table-responsive"><table><thead><tr>`;
+                    (block.headers || []).forEach(h => { tableHTML += `<th>${h}</th>`; });
+                    tableHTML += `</tr></thead><tbody>`;
+
+                    (block.rows || []).forEach(row => {
+                        tableHTML += `<tr>`;
+                        row.forEach(cell => { tableHTML += `<td>${processCitations(cell)}</td>`; });
+                        tableHTML += `</tr>`;
+                    });
+                    tableHTML += `</tbody></table></div>`;
+                    contentHTML += tableHTML;
+                }
+                else if (block.block_type === 'code') {
+                    const rawCode = block.code || '';
+                    const lang = block.language || 'plaintext';
+                    const highlighted = hljs.getLanguage(lang) ? hljs.highlight(rawCode, { language: lang }).value : hljs.highlightAuto(rawCode).value;
+                    contentHTML += `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
+                }
+                else if (block.block_type === 'chart') {
+                    const canvasId = `chart-${index}`;
+                    contentHTML += `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                    chartsToRender.push({ canvasId, block });
+                }
+                else if (block.block_type === 'source_list') {
+                    sourcesHTML = `
+                        <div class="sources-section">
+                            <h2>References</h2>
+                            <div>
+                    `;
+                    (block.sources || []).forEach((src, idx) => {
+                        const id = idx + 1;
+                        sourcesHTML += `
+                            <div class="source-item" id="source-${id}">
+                                <span class="source-id">[${id}]</span>
+                                <a href="${src}" target="_blank" rel="noopener noreferrer">${src}</a>
+                            </div>`;
+                    });
+                    sourcesHTML += `</div></div>`;
+                }
+
+                if (contentHTML) {
+                    const wrapper = document.createElement('div');
+                    // Add tex2jax_process class to enable MathJax parsing
+                    wrapper.className = 'tex2jax_process';
+                    wrapper.innerHTML = contentHTML;
+                    container.appendChild(wrapper);
+                }
+            });
+
+            // Typeset MathJax after DOM injection
+            if (window.MathJax) {
+                window.MathJax.typesetPromise([container]).catch((err) => console.error('MathJax error: ', err));
+            }
+
+            // Append sources at the end
+            if (sourcesHTML) {
+                container.insertAdjacentHTML('beforeend', sourcesHTML);
+            }
+
+            // Render Charts
+            chartsToRender.forEach(({ canvasId, block }) => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: block.chart_type || 'bar',
+                    data: {
+                        labels: block.labels || [],
+                        datasets: (block.datasets || []).map((ds, i) => ({
+                            label: ds.label,
+                            data: ds.data,
+                            backgroundColor: getChartColor(i, 0.7),
+                            borderColor: getChartColor(i, 1),
+                            borderWidth: 1,
+                            borderRadius: block.chart_type === 'bar' ? 4 : 0
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+            });
+        }
+
+        function getChartColor(index, alpha) {
+            const colors = [
+                `rgba(37, 99, 235, ${alpha})`,   // Blue
+                `rgba(15, 23, 42, ${alpha})`,    // Slate
+                `rgba(139, 92, 246, ${alpha})`,  // Violet
+                `rgba(16, 185, 129, ${alpha})`   // Emerald
+            ];
+            return colors[index % colors.length];
+        }
+
+        document.addEventListener('DOMContentLoaded', loadReport);
+    </script>
+</body>
+
+</html>

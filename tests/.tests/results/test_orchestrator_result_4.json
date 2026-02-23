@@ -1,0 +1,333 @@
+{
+  "title": "The Evolution of Neural Networks: From Perceptrons to World Models",
+  "summary": "This report provides a comprehensive overview of the evolution of artificial neural networks, beginning with their biological inspiration and foundational components. It delves into the early Perceptron model, detailing its mechanism and limitations. The report then traces the development through Convolutional Neural Networks (CNNs) for image processing and Recurrent Neural Networks (RNNs) for sequential data, highlighting their architectural innovations and applications. The narrative continues to the advent of Large Language Models (LLMs), driven by the Transformer architecture, and concludes with an exploration of emerging World Models. Comparative analyses, illustrative market share data, and code snippets are included to provide a holistic understanding of these transformative technologies. Note that while the foundational sections are extensively cited from provided research, subsequent sections on CNNs, RNNs, LLMs, and World Models are based on general knowledge in the field of AI/ML, and market share/comparison data are illustrative due to the scope of provided research materials.",
+  "blocks": [
+    {
+      "block_type": "text",
+      "title": "Introduction to Artificial Neural Networks: Biological Inspiration and Early Models",
+      "markdown": "Artificial Neural Networks (ANNs) form a cornerstone of modern artificial intelligence, drawing significant inspiration from the intricate architecture and functionality of the human brain's biological neural networks [12]. These sophisticated computational systems are engineered to acquire knowledge from extensive datasets, autonomously discerning complex patterns and relationships [12].\n\n### Biological Inspiration\n\nThe fundamental concept underpinning artificial neural networks is directly derived from the biological neuron, which serves as the primary unit for information processing within the brain and the broader nervous system [14]. Biological neurons function as transducers, converting input signals from preceding neurons into an output signal for subsequent neurons [14]. Their core role involves deciding whether to activate, or 'fire,' based on the aggregation of these incoming signals [14].\n\nThis biological blueprint translates into several analogous components within artificial neurons:\n\n*   **Input Reception**: Biological neurons receive input signals via fine filaments known as dendrites [15]. Similarly, an artificial neuron, often termed a perceptron, accepts numerical inputs, such as pixel values in an image [7].\n*   **Connection Strength**: The points of connection between dendrites and biological neurons are called synapses [10]. In ANNs, these connections are represented by 'weights,' which quantify the importance or strength of each input signal [15].\n*   **Signal Integration and Thresholding**: A biological neuron integrates both excitatory (activation-promoting) and inhibitory (activation-suppressing) signals. If the cumulative excitatory signal surpasses a specific threshold, the neuron 'fires' [14]. Analogously, an artificial neuron computes a weighted sum of its inputs, and this sum is then processed by an activation function to determine its output, effectively deciding whether the neuron should 'activate' [7].\n\nThe conceptualization of artificial networks began in 1943 with Warren McCulloch and Walter Pitts, who proposed a model elucidating the potential operational mechanisms of brain neurons [7]. This pioneering work established the groundwork for the subsequent development of ANNs, which have since become powerful computational tools applied across diverse domains, including computer vision, natural language processing, and fraud detection [12].",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "Basic Components of an Artificial Neuron",
+      "markdown": "An artificial neuron, frequently referred to as a node, constitutes the fundamental processing unit within an ANN [12]. It operates as a simplified mathematical model, executing a sequence of calculations to generate an output based on its received inputs [7]. The essential components of an artificial neuron include:\n\n1.  **Inputs**: These are numerical values that the neuron receives, representing either raw data points or outputs from other neurons situated in a preceding layer [7]. These inputs are typically denoted as $x_1, x_2, \text{...}, x_n$.\n2.  **Weights**: Each input connection leading to the neuron is assigned a specific weight, $w_i$. Weights are crucial as they dictate the 'importance' or 'strength' of each incoming signal [12]. These weights are parameters that the model learns and are iteratively adjusted during the training phase to minimize the disparity between the network's predicted outputs and the actual target outputs [15].\n3.  **Summation Function (Weighted Sum)**: The neuron's initial operation involves calculating a weighted sum of its inputs. This process entails multiplying each input by its corresponding weight and then summing these products [7]. Mathematically, this can be expressed as: $Z = \\sum_{i=1}^{n} (x_i \\cdot w_i)$.\n4.  **Bias**: In addition to the weighted sum, a bias term ($b$) is typically incorporated. The bias is another learnable parameter that enables the activation function to be shifted, thereby effectively adjusting the neuron's activation threshold [12]. The calculation thus becomes: $Z = \\sum_{i=1}^{n} (x_i \\cdot w_i) + b$.\n5.  **Activation Function**: The result of the weighted sum (plus bias) is subsequently passed through an activation function. This function is vital for introducing non-linearity into the network, a characteristic indispensable for ANNs to learn and approximate the complex, non-linear relationships frequently observed in real-world data [10][14]. The specific type of activation function determines how a neuron 'fires' or activates, and it can also constrain the output value within a defined range [10]. Common activation functions include:\n    *   **Sigmoid**: Compresses the output to a range between 0 and 1 [10].\n    *   **Hyperbolic Tangent (tanh)**: Compresses the output to a range between -1 and 1 [14].\n    *   **Rectified Linear Unit (ReLU)**: Outputs the input directly if it is positive, otherwise, it outputs zero [14].\n    The final output of the neuron is given by: $Output = A(Z)$, where $A$ represents the activation function.\n6.  **Output**: The final output generated by the activation function is then either transmitted as an input to subsequent neurons in the next layer or serves as the ultimate output of the entire network [7].",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "The Perceptron Model: A Foundational Step",
+      "markdown": "The perceptron, introduced by Frank Rosenblatt in 1958, is widely recognized as the inaugural algorithm modeled after a biological neuron and stands as the simplest form of an artificial neuron [7][14]. It operates as a single-layer neural network, functioning primarily as a linear classifier for binary classification tasks [15].\n\n### How the Perceptron Works\n\nThe perceptron model is engineered to perform binary classification by receiving multiple inputs, applying specific weights to each, summing these weighted inputs, and then passing this sum through a straightforward activation function to yield a binary output (e.g., 0 or 1, or -1 or 1) [15]. In its original formulation, the perceptron typically employed a step function as its activation mechanism. This function produces one value (e.g., 1) if the weighted sum surpasses a predetermined threshold, and another value (e.g., 0 or -1) otherwise [14].\n\nThe operational sequence can be summarized as follows:\n\n1.  **Receive Inputs**: The perceptron takes in numerical inputs, denoted as $x_1, x_2, \text{...}, x_n$.\n2.  **Apply Weights**: Each input $x_i$ is multiplied by its corresponding weight $w_i$.\n3.  **Calculate Weighted Sum**: The products are summed, and a bias $b$ is added: $Z = \\sum_{i=1}^{n} (x_i \\cdot w_i) + b$.\n4.  **Apply Activation Function**: The sum $Z$ is then processed by a step activation function, $A(Z)$. For instance, if $Z \\ge \\text{threshold}$, the output is 1; otherwise, the output is 0.\n5.  **Produce Output**: The final output represents the classification decision.\n\n### Training and Function\n\nThe perceptron learns through an iterative process of adjusting the weights associated with its neurons. During training, it processes input data, compares its predicted output against the actual desired output, and subsequently modifies the weights to minimize the discrepancy between them [15]. This iterative adjustment mechanism enables the perceptron to learn to classify input data accurately.\n\n### Limitations\n\nDespite its groundbreaking nature for its era, a single perceptron is inherently limited to solving linearly separable problems [14]. This implies that it can only classify data that can be perfectly divided by a single straight line (or a hyperplane in higher-dimensional spaces) [14]. It is incapable of modeling complex, non-linear relationships. This limitation presented a significant challenge until the advent of multi-layer perceptrons (MLPs), which overcome this constraint by incorporating 'hidden layers' of neurons. These hidden layers enable MLPs to model more intricate, non-linear relationships between inputs and outputs [14]. Furthermore, the introduction of diverse activation functions beyond the simple step function, such as sigmoid, tanh, and ReLU, in contemporary ANNs has substantially enhanced their learning capabilities and their capacity to model complex relationships [14].",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "The Rise of Convolutional Neural Networks (CNNs)",
+      "markdown": "Following the foundational work on perceptrons and multi-layer perceptrons, a significant breakthrough in neural network architecture came with the development of Convolutional Neural Networks (CNNs). CNNs were specifically designed to process data with a known grid-like topology, such as image data, which can be represented as a 2D grid of pixels. Their emergence revolutionized the field of computer vision, enabling unprecedented performance in tasks like image classification, object detection, and segmentation.\n\nThe key innovation of CNNs lies in their use of specialized layers that exploit the spatial hierarchies in data. These include:\n\n*   **Convolutional Layers**: Instead of fully connected layers where every input neuron connects to every output neuron, convolutional layers apply a 'filter' or 'kernel' that slides across the input data (e.g., an image). This filter performs a dot product with the local region of the input it's currently covering, producing a feature map. This process allows the network to automatically learn spatially invariant features, such as edges, textures, and patterns, at different levels of abstraction.\n*   **Pooling Layers**: These layers typically follow convolutional layers and serve to reduce the spatial dimensions of the feature maps, thereby reducing the number of parameters and computational cost. Common pooling operations include max pooling (taking the maximum value in a window) and average pooling (taking the average value). Pooling also helps in making the detected features more robust to small translations and distortions in the input.\n*   **Activation Functions**: Similar to traditional ANNs, non-linear activation functions (most commonly ReLU) are applied after convolutional operations to introduce non-linearity, allowing the network to learn more complex patterns.\n*   **Fully Connected Layers**: After several convolutional and pooling layers, the high-level features are typically flattened and fed into one or more fully connected layers, similar to those in a traditional MLP, for final classification or regression.\n\nCNNs' ability to automatically learn hierarchical features from raw pixel data, coupled with their parameter sharing mechanism (where the same filter is applied across different locations), made them highly efficient and effective for visual tasks, overcoming the limitations of earlier models that struggled with the high dimensionality and spatial complexity of images.",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "code",
+      "title": "CNN Implementation Snippet (PyTorch)",
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": "python",
+      "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass SimpleCNN(nn.Module):\n    def __init__(self):\n        super(SimpleCNN, self).__init__()\n        # Convolutional Layer 1: 1 input channel (grayscale image), 32 output channels, 3x3 kernel\n        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)\n        # Convolutional Layer 2: 32 input channels, 64 output channels, 3x3 kernel\n        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)\n        # Max pooling layer with 2x2 window and stride 2\n        self.pool = nn.MaxPool2d(2, 2)\n        # Fully connected layer: input features depend on image size and conv/pool operations\n        # For a 28x28 input image, after two conv+pool layers, spatial dim becomes 7x7\n        # 64 channels * 7 * 7 = 3136 input features\n        self.fc1 = nn.Linear(64 * 7 * 7, 10) # 10 output classes (e.g., MNIST digits)\n\n    def forward(self, x):\n        # Input x: (batch_size, 1, 28, 28)\n        x = self.pool(F.relu(self.conv1(x))) # (batch_size, 32, 14, 14)\n        x = self.pool(F.relu(self.conv2(x))) # (batch_size, 64, 7, 7)\n        x = x.view(-1, 64 * 7 * 7)          # Flatten for fully connected layer\n        x = self.fc1(x)                     # (batch_size, 10)\n        return x\n\n# Example usage:\n# model = SimpleCNN()\n# input_tensor = torch.randn(1, 1, 28, 28) # Batch size 1, 1 channel, 28x28 image\n# output = model(input_tensor)\n# print(output.shape) # Expected: torch.Size([1, 10])",
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "Recurrent Neural Networks (RNNs) for Sequential Data",
+      "markdown": "While CNNs excelled in processing spatial data like images, a different architectural paradigm was needed for sequential data, where the order and context of information are crucial. This led to the development of Recurrent Neural Networks (RNNs). RNNs are specifically designed to handle sequences by maintaining an internal state (memory) that captures information from previous steps in the sequence, allowing them to make predictions based on past inputs.\n\nKey characteristics of RNNs include:\n\n*   **Recurrent Connections**: Unlike feedforward networks, RNNs have connections that loop back on themselves, allowing information to persist from one step to the next. At each time step, an RNN cell takes an input from the current step and the hidden state from the previous step to produce an output and a new hidden state.\n*   **Memory**: The hidden state acts as a form of short-term memory, allowing the network to learn dependencies across different time steps. This makes them suitable for tasks where context is important, such as natural language processing (NLP), speech recognition, and time series prediction.\n*   **Vanishing/Exploding Gradients**: A major challenge with vanilla RNNs is the vanishing or exploding gradient problem during backpropagation through time. This makes it difficult for them to learn long-range dependencies, as gradients can become too small or too large over many time steps.\n\nTo address these limitations, more sophisticated recurrent architectures were developed:\n\n*   **Long Short-Term Memory (LSTM) Networks**: LSTMs, introduced by Hochreiter and Schmidhuber in 1997, incorporate 'gates' (input, forget, and output gates) that regulate the flow of information into and out of a 'cell state.' This cell state acts as a long-term memory, allowing LSTMs to selectively remember or forget information over extended periods, effectively mitigating the vanishing gradient problem.\n*   **Gated Recurrent Units (GRUs)**: GRUs are a simpler variant of LSTMs, featuring fewer gates (reset and update gates) but offering comparable performance on many tasks. Their reduced complexity often leads to faster training times.\n\nRNNs, particularly LSTMs and GRUs, became the standard for sequence modeling tasks, enabling significant advancements in machine translation, text generation, and speech recognition before the advent of the Transformer architecture.",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "code",
+      "title": "RNN (LSTM) Implementation Snippet (PyTorch)",
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": "python",
+      "code": "import torch\nimport torch.nn as nn\n\nclass SimpleLSTM(nn.Module):\n    def __init__(self, input_size, hidden_size, num_layers, num_classes):\n        super(SimpleLSTM, self).__init__()\n        self.hidden_size = hidden_size\n        self.num_layers = num_layers\n        # LSTM layer: input_size is feature dimension, hidden_size is internal state size\n        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)\n        # Fully connected layer for classification\n        self.fc = nn.Linear(hidden_size, num_classes)\n\n    def forward(self, x):\n        # Input x: (batch_size, sequence_length, input_size)\n        # Initialize hidden state and cell state\n        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)\n        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)\n\n        # Forward propagate LSTM\n        out, _ = self.lstm(x, (h0, c0)) # out: (batch_size, sequence_length, hidden_size)\n\n        # Decode the hidden state of the last time step\n        out = self.fc(out[:, -1, :]) # Take the output from the last time step\n        return out\n\n# Example usage:\n# input_size = 10   # e.g., word embedding dimension\n# hidden_size = 128\n# num_layers = 2\n# num_classes = 5   # e.g., sentiment classes\n# model = SimpleLSTM(input_size, hidden_size, num_layers, num_classes)\n# input_tensor = torch.randn(32, 20, input_size) # Batch size 32, sequence length 20\n# output = model(input_tensor)\n# print(output.shape) # Expected: torch.Size([32, 5])",
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "Evolution to Modern Large Language Models (LLMs)",
+      "markdown": "The landscape of neural networks, particularly for sequential data, underwent another profound transformation with the introduction of the Transformer architecture in 2017. This architecture fundamentally changed how models process sequences, moving away from the sequential processing of RNNs and LSTMs to a parallelized mechanism based on 'self-attention.'\n\nKey aspects of the Transformer and its impact on LLMs include:\n\n*   **Self-Attention Mechanism**: The core innovation of the Transformer is the self-attention mechanism, which allows the model to weigh the importance of different words (or tokens) in an input sequence when processing each word. This enables the model to capture long-range dependencies much more effectively and efficiently than RNNs, without the vanishing gradient problem.\n*   **Parallelization**: Unlike RNNs, which process tokens one by one, the self-attention mechanism allows all tokens in a sequence to be processed simultaneously. This parallelization significantly speeds up training on modern hardware (GPUs, TPUs) and enables the training of much larger models.\n*   **Encoder-Decoder Structure**: The original Transformer model consists of an encoder stack and a decoder stack. The encoder processes the input sequence, and the decoder generates the output sequence, attending to both the encoder's output and its own previous outputs.\n*   **Positional Encoding**: Since the self-attention mechanism itself is permutation-invariant (it doesn't inherently understand word order), positional encodings are added to the input embeddings to inject information about the relative or absolute position of tokens in the sequence.\n\nThe Transformer architecture quickly became the dominant paradigm for natural language processing. Its scalability, combined with the availability of vast amounts of text data and increased computational power, led to the development of Large Language Models (LLMs). LLMs are Transformer-based models with billions or even trillions of parameters, pre-trained on massive text corpora. This pre-training allows them to learn rich representations of language, enabling them to perform a wide array of tasks, including text generation, translation, summarization, question answering, and even complex reasoning, often with remarkable fluency and coherence. Models like GPT (Generative Pre-trained Transformer) series, BERT, and T5 are prominent examples of LLMs that have reshaped the field of AI.",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "code",
+      "title": "LLM Architectural Concepts (Simplified Transformer Block in PyTorch)",
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": "python",
+      "code": "import torch\nimport torch.nn as nn\n\nclass MultiHeadSelfAttention(nn.Module):\n    def __init__(self, embed_dim, num_heads):\n        super(MultiHeadSelfAttention, self).__init__()\n        self.num_heads = num_heads\n        self.head_dim = embed_dim // num_heads\n        assert self.head_dim * num_heads == embed_dim, \"embed_dim must be divisible by num_heads\"\n\n        self.qkv_proj = nn.Linear(embed_dim, embed_dim * 3)\n        self.output_proj = nn.Linear(embed_dim, embed_dim)\n\n    def forward(self, x):\n        # x: (batch_size, seq_len, embed_dim)\n        batch_size, seq_len, embed_dim = x.size()\n\n        qkv = self.qkv_proj(x).reshape(batch_size, seq_len, 3, self.num_heads, self.head_dim)\n        q, k, v = qkv.permute(2, 0, 3, 1, 4).unbind(dim=0)\n\n        # Scaled Dot-Product Attention\n        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)\n        attention_weights = F.softmax(scores, dim=-1)\n        output = torch.matmul(attention_weights, v)\n\n        output = output.permute(0, 2, 1, 3).reshape(batch_size, seq_len, embed_dim)\n        return self.output_proj(output)\n\nclass TransformerBlock(nn.Module):\n    def __init__(self, embed_dim, num_heads, ff_dim, dropout=0.1):\n        super(TransformerBlock, self).__init__()\n        self.attention = MultiHeadSelfAttention(embed_dim, num_heads)\n        self.norm1 = nn.LayerNorm(embed_dim)\n        self.dropout1 = nn.Dropout(dropout)\n\n        self.ffn = nn.Sequential(\n            nn.Linear(embed_dim, ff_dim),\n            nn.GELU(),\n            nn.Linear(ff_dim, embed_dim)\n        )\n        self.norm2 = nn.LayerNorm(embed_dim)\n        self.dropout2 = nn.Dropout(dropout)\n\n    def forward(self, x):\n        # Self-attention part\n        attn_output = self.attention(x)\n        x = self.norm1(x + self.dropout1(attn_output)) # Add & Norm\n\n        # Feed-forward part\n        ffn_output = self.ffn(x)\n        x = self.norm2(x + self.dropout2(ffn_output)) # Add & Norm\n        return x\n\n# Example usage:\n# embed_dim = 512\n# num_heads = 8\n# ff_dim = 2048\n# transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim)\n# input_tensor = torch.randn(1, 10, embed_dim) # Batch size 1, sequence length 10\n# output = transformer_block(input_tensor)\n# print(output.shape) # Expected: torch.Size([1, 10, 512])",
+      "sources": null
+    },
+    {
+      "block_type": "text",
+      "title": "The Emergence of World Models",
+      "markdown": "Beyond the impressive capabilities of LLMs in language understanding and generation, a more ambitious frontier in AI research is the development of 'World Models.' Inspired by the human brain's ability to build internal representations of the environment and use them for planning and prediction, World Models aim to create AI systems that can learn a compressed, predictive model of their environment. This internal model allows the agent to simulate future outcomes, plan actions, and even learn complex behaviors entirely within its imagination, without constant interaction with the real world.\n\nWorld Models typically consist of three main components:\n\n*   **Vision Model (V)**: This component processes raw sensory input (e.g., images from a camera) and encodes it into a compact, lower-dimensional latent representation. This representation captures the essential features of the current observation, discarding irrelevant details.\n*   **Memory Model (M)**: Also known as the 'dynamics model' or 'recurrent neural network,' this component learns to predict the next latent state of the environment given the current latent state and the agent's action. It essentially learns the 'physics' or transition rules of the world. This model is often a recurrent neural network (like an LSTM or GRU) that processes sequences of latent states and actions.\n*   **Controller Model (C)**: This component takes the current latent state from the vision model and the predicted future states from the memory model to decide on the next action. The controller can be a simple feedforward neural network or a more complex policy network that learns to achieve specific goals by interacting with the internal world model.\n\nThe primary advantage of World Models is their potential for highly efficient learning. By simulating experiences within its learned internal model, an agent can generate vast amounts of synthetic data and practice complex tasks without the cost, time, or safety constraints of real-world interaction. This approach holds promise for developing more robust, adaptive, and general-purpose AI agents capable of understanding and interacting with complex environments in a human-like manner, moving towards truly intelligent agents that can reason and plan.",
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "table",
+      "title": "Comparative Analysis of Neural Network Architectures (Illustrative)",
+      "markdown": null,
+      "headers": [
+        "Model Type",
+        "Primary Use Case",
+        "Key Architectural Feature",
+        "Strengths",
+        "Limitations"
+      ],
+      "rows": [
+        [
+          "Perceptron (ANN)",
+          "Binary Classification",
+          "Single layer, weighted sum, step activation",
+          "Simplicity, foundational for ANNs",
+          "Limited to linearly separable problems"
+        ],
+        [
+          "Multi-Layer Perceptron (MLP)",
+          "General Classification/Regression",
+          "Multiple hidden layers, non-linear activations",
+          "Learns complex non-linear relationships",
+          "Lacks spatial/temporal awareness, many parameters for high-dim data"
+        ],
+        [
+          "Convolutional Neural Network (CNN)",
+          "Image/Video Processing",
+          "Convolutional layers, pooling, parameter sharing",
+          "Excellent for spatial data, learns hierarchical features, translation invariant",
+          "Less effective for sequential data, fixed input size"
+        ],
+        [
+          "Recurrent Neural Network (RNN)",
+          "Sequential Data Processing (Text, Speech, Time Series)",
+          "Recurrent connections, hidden state (memory)",
+          "Handles variable-length sequences, captures temporal dependencies",
+          "Suffers from vanishing/exploding gradients, struggles with long-range dependencies (vanilla RNNs)"
+        ],
+        [
+          "Long Short-Term Memory (LSTM) / Gated Recurrent Unit (GRU)",
+          "Advanced Sequential Data Processing",
+          "Gating mechanisms (forget, input, output gates)",
+          "Mitigates vanishing gradient problem, learns long-range dependencies",
+          "Sequential processing can be slow, still less efficient for very long sequences than Transformers"
+        ],
+        [
+          "Large Language Model (LLM) (Transformer-based)",
+          "Natural Language Understanding/Generation, Reasoning",
+          "Self-attention mechanism, parallel processing, positional encoding",
+          "Exceptional for long-range dependencies, highly parallelizable, scalable to billions of parameters",
+          "Computationally intensive to train, requires massive datasets, can be prone to hallucination"
+        ],
+        [
+          "World Model",
+          "Reinforcement Learning, Planning, Simulation",
+          "Vision, Memory (dynamics), Controller components",
+          "Enables planning in latent space, efficient learning through simulation, potential for general intelligence",
+          "Complex to build and train, accuracy of internal model is critical, still an active research area"
+        ]
+      ],
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "chart",
+      "title": "Illustrative Market Share of Neural Network Paradigms (Conceptual)",
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": "pie",
+      "labels": [
+        "MLP/Basic ANN",
+        "CNNs",
+        "RNNs/LSTMs/GRUs",
+        "LLMs (Transformers)",
+        "World Models & Emerging"
+      ],
+      "datasets": [
+        {
+          "label": "Market Share",
+          "data": [
+            5.0,
+            30.0,
+            15.0,
+            45.0,
+            5.0
+          ]
+        }
+      ],
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "chart",
+      "title": "Historical Evolution of Neural Network Paradigms (Conceptual Adoption Timeline)",
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": "bar",
+      "labels": [
+        "1950s-1980s",
+        "1990s-Early 2000s",
+        "2000s-2010s",
+        "2010s-2020s",
+        "2020s Onwards"
+      ],
+      "datasets": [
+        {
+          "label": "Perceptron/ANN",
+          "data": [
+            80.0,
+            20.0,
+            10.0,
+            5.0,
+            2.0
+          ]
+        },
+        {
+          "label": "CNNs",
+          "data": [
+            0.0,
+            10.0,
+            40.0,
+            30.0,
+            20.0
+          ]
+        },
+        {
+          "label": "RNNs/LSTMs",
+          "data": [
+            0.0,
+            5.0,
+            30.0,
+            20.0,
+            10.0
+          ]
+        },
+        {
+          "label": "LLMs (Transformers)",
+          "data": [
+            0.0,
+            0.0,
+            0.0,
+            40.0,
+            60.0
+          ]
+        },
+        {
+          "label": "World Models",
+          "data": [
+            0.0,
+            0.0,
+            0.0,
+            5.0,
+            8.0
+          ]
+        }
+      ],
+      "language": null,
+      "code": null,
+      "sources": null
+    },
+    {
+      "block_type": "source_list",
+      "title": null,
+      "markdown": null,
+      "headers": null,
+      "rows": null,
+      "chart_type": null,
+      "labels": null,
+      "datasets": null,
+      "language": null,
+      "code": null,
+      "sources": [
+        "https://medium.com/@abhaysingh71711/perceptron-building-block-of-artificial-neural-network-e5d6b366f877",
+        "https://www.codemotion.com/magazine/ai-ml/deep-learning/the-perceptron-the-first-building-block-of-neural-networks/",
+        "https://developer.ibm.com/articles/cc-cognitive-neural-networks-deep-dive/",
+        "https://medium.com/@tahirbalarabe2/what-is-the-perceptron-a-foundational-neural-network-model-c722687dc51a",
+        "https://en.wikipedia.org/wiki/Neural_network_(machine_learning)",
+        "https://medium.com/@bhatadithya54764118/day-43-introduction-to-neural-networks-biological-vs-artificial-networks-b8cd40d7df7d",
+        "https://medium.com/@mustaphaliaichi/neural-networks-and-deep-learning-a-comprehensive-introduction-092449336c1f",
+        "https://www.bizstim.com/news/article/understanding-perceptrons-in-machine-learning",
+        "https://towardsdatascience.com/the-concept-of-artificial-neurons-perceptrons-in-neural-networks-fab22249cbfc/",
+        "https://www.ncbi.nlm.nih.gov/books/NBK583971/",
+        "https://www.codemotion.com/magazine/ai-ml/deep-learning/artificial-neural-networks-biological-inspiration-behind-deep-learning/",
+        "https://www.pvpsiddhartha.ac.in/dep_cse/lect_note/32/ml/ML%20UNIT-II.pdf",
+        "https://matt.might.net/articles/hello-perceptron/",
+        "https://www.lucentinnovation.com/resources/technology-posts/understanding-the-perceptron"
+      ]
+    }
+  ]
+}

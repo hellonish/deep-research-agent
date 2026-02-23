@@ -1,0 +1,106 @@
+What do street lamps, large motors, data centers, and stadiums have in common? They all rely on ready access to electricity—and lots of it.
+
+But getting electricity for a specific purpose isn’t as simple as hooking up directly to the power lines. The high voltage electricity in power lines is only suitable for transmitting power over long distances. To be usable in everyday applications, the electricity must pass through a transformer which converts the power to a suitable voltage.
+
+Many people know what a transformer looks like. Understanding how they work, though, is a different story. Whether you’re budgeting for a transformer or installing one, knowing what transformers do and how they work provides greater clarity on what you need. In this article, you’ll find an introduction to transformers, why we need them, how they work, and a run-through of their most important parts.
+
+What is a Transformer?
+In the simplest of terms, a transformer is an electrical device that takes a given input voltage and changes it to a different output voltage. This change can either be an increase or a decrease in voltage.
+
+Hydroelectric dam
+Electricity and Why We Need to Transform It
+Electrical energy consists of two key elements: current and voltage.
+
+Current is the rate of flow of electrical energy, measured in amps
+Voltage is the force of that electrical energy, measured in volts
+Think of electricity as water flowing through a pipe.
+
+Current is the rate of water flow
+Voltage is the water pressure
+To move water from the city reservoir to homes, businesses, and factories, you need a big pipe and a lot of water pressure. City water lines are built to handle huge volumes of water and that water moves quickly because of powerful water pressure.
+
+Now imagine hooking up a high-volume, high-pressure city water pipe directly to your kitchen sink. The faucet would burst as soon as you turn it on and you’d have a river gushing into your house. To be usable, the water pressure from the main water line must be reduced using pressure regulators.
+
+Once the water pressure has been reduced, it can finally be used for showers, cleaning dishes, watering your garden, and any other household and business chores.
+
+Transformers do the same thing to electricity. The electricity running through power lines can exceed 300,000 volts—a massive amount of “electrical pressure”. Transformers make electricity usable by lowering the voltage at the point of use. These types of transformers are called step-down transformers.
+
+These range from massive substation transformers found in utility substation yards, to those big green padmount transformers sitting outside your business, to small polemount transformers found atop power poles.
+
+Commercial and industrial operations use large transformers, which provide three-phase voltages like 480 or 208 volts. Homes and small businesses use smaller single-phase transformers to provide 120/240v single-phase. Here, we will focus on three-phase distribution transformers.
+
+How Do Transformers Work?
+A transformer functions under the law of energy conservation, which states that energy can neither be created nor destroyed, only transformed. Therefore, a transformer does not make electricity, it merely changes the voltage to suit the needs of the user.
+
+Transformers accomplish this change in voltage through the process of electromagnetic induction.
+
+Electromagnetic Induction
+
+When you run an alternating electric current through a wire (conductor), an invisible, moving magnetic field is created around the electrified conductor. When you place a second conductor within this changing magnetic field, the moving flux lines in the field induce a current in the second conductor.
+
+You can use electromagnetic induction to increase or decrease voltage between the two conductors by wrapping the two conductors into coils with one being longer (having more loops in the coil), and the other shorter (having fewer loops in the coil). If you then electrify the coil having more loops, a current will be induced in the coil with fewer loops at a lower voltage than is present in the first coil.
+
+Illustration of iron transformer core
+electrical transformer core and coil for a pad mount transformer
+How Does a Transformer Coil Work?
+The first coiled conductor where electricity enters the transformer is called the primary coil, and the other coil where current is induced is called the secondary coil. Both the primary and secondary coils (also called windings), made of aluminum or copper, are wrapped around an iron core which strengthens, and directs the changing magnetic field for better induction. As the magnetic field activates, the metal core expands and contracts. This movement creates the transformer humming or buzzing sound.
+
+Each loop in the coil around the iron core is called a “turn”.
+
+How do we get the exact voltage that we need? First, we have to understand one simple rule: the ratio of turns between the primary and secondary coils determines the ratio of voltage between the coils.
+
+If the ratio of turns between the coils is 25:1, then the voltage will be transformed at a ratio of 25:1. To get the precise voltage you need, you would build a transformer with the exact desired ratio of turns in each coil. A transformer with a turns ratio of 25:1 would be used to transform 12,000 volts to 480 volts.
+
+Three-phase transformer coils are connected in either a delta or a wye configuration.
+
+Parts of a Transformer
+There are many configurations and types of transformers, like unit substation, polemount, medium voltage dry-type, and general purpose low voltage dry-type transformers. Despite different design goals, they all use similar components. Below we will explore the parts found in oil-filled padmount transformers.
+
+Outline of a transformer core without coils on it.
+Core
+A transformer’s Core is a structure of thin, stacked sheets of steel. The unit’s windings are wrapped around this core. Current passing through the windings induces an electromagnetic field. The core focuses this magnetic coupling and ensures an efficient transfer of energy between the primary and secondary windings.
+
+Transformer Core
+Illustrated transformer core and coils
+Coils
+A transformer’s Coils are the windings of aluminum or copper wrapped around the core. The coil has two main parts: a primary winding and a secondary winding. The primary winding receives voltage from the utility, while the secondary winding steps that voltage up or down, depending on the application.
+
+Transformer Coil
+Illustrated transformer bushing
+Bushings
+Transformer bushings are insulated terminals that allow electricity to pass safely through the tank wall of a transformer without making electrical contact with it. They are the parts of the transformer that connect to the power source (on the high voltage side), and the load (on the low voltage side).
+
+Transformer Bushings
+Illustrated transformer fuse
+Fuses
+Transformer fuses protect the electrical system in case there’s a problem with the transformer or in the equipment further down the electrical stream. When exposed to a dangerously high current or excessive heat, a thin wire (called an “element”) within the fuse melts. This opens or “breaks” the flow of electricity, disconnecting the transformer from the power grid.
+
+Fuses
+Illustrated voltage adjustment tap
+Voltage Adjustment Taps
+A transformer voltage adjustment taps allow you to maintain the correct secondary voltage in case the primary voltage is higher or lower than expected. The tap setting is adjusted by rotating the tap changer. As the tap changer is rotated, small sections of the primary windings are disengaged, which alters the ratio of primary to secondary windings, thereby lowering the primary voltage rating.
+
+Voltage Adjustment Taps
+Illustrated load break switch
+Load Break Switches
+A transformer load break switch (LBOR switch) is a special rotary switch that allows electrical workers to manually disconnect the transformer from the power grid, de-energizing the core and coils. These switches are called load break switches because they can be used even when the transformer is energized and “under load.”
+
+Load Break Switches
+Illustrated tank of transformer fluid
+Fluid
+Transformer oil or fluid is used to cool down transformers when they heat up during use. To maintain low temperatures, a special tank is filled with transformer fluid. This fluid flows through channels or “ducts” between the transformer’s windings and serves as an insulator and cooling medium. Only liquid filled transformers contain transformer fluid.
+
+Fluid
+Illustrated transformer gauge
+Gauges
+Transformer gauges are used to monitor a variety of operating conditions of the transformer, including oil level, temperature, and tank pressure. In larger transformers, the level and types of monitoring can be more sophisticated.
+
+Gauges
+Pressure release device for electrical transformer
+Pressure Release Device
+Transformer tanks can build up pressure for a variety of reasons, from simple overheating to internal faults. When this occurs, a Pressure Release Device vents excess pressure from the tank. This prevents the pressure reaching a critical level, which could rupture the tank.
+
+Pressure Release Device
+This is a Maddox Transformer nameplate.
+Nameplate
+A Nameplate is a metal or plastic placard that provides information about the transformer’s specs and operational capabilities. Some of the specs found on a nameplate are the unit’s kVA and Voltage Ratings, Phase, Winding Diagram, and Cooling Class, and other essential details.

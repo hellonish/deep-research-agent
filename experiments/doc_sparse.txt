@@ -1,0 +1,10 @@
+Technical specification: API rate limits.
+
+Our API uses the following limits:
+- REST: 100 requests per minute per API key.
+- WebSocket: 5 connections per account.
+- Error code 429 indicates rate limit exceeded.
+- Include the X-RateLimit-Remaining header in responses.
+
+For SDK integration, see the section "Rate limiting" in the developer docs.
+Reference: RFC 6585 (additional HTTP status codes). Use exponential backoff when you receive 429.

@@ -1,0 +1,22 @@
+# Python
+__pycache__
+.venv
+*.pyc
+
+# VSCode
+.vscode
+
+# Cursor
+.cursor
+
+# macOS
+.DS_Store
+
+# Local / secrets
+.env
+.env.*
+*.db
+db.sqlite
+
+# Git
+.git

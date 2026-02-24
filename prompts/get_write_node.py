@@ -16,6 +16,7 @@ def get_write_node(
     child_summaries: list[str],
     user_query: str,
     llm_client,
+    max_tokens: int | None = None,
 ) -> NodeDraft:
     """
     One LLM call per node: write this section's blocks and a dense summary.
@@ -38,8 +39,8 @@ SUMMARIES FROM CHILD SECTIONS (for context; do not repeat verbatim):
 3. The original user query.
 
 Your tasks:
-1. Produce 1–4 content blocks for THIS section only. Use substantive "text" blocks with inline citations [1], [2]. When this section's content has comparable items (e.g. features, pricing, options) or numeric data (benchmarks, trends), add one "table" or "chart" block with that real data—do not add filler. Use "code" only for actual snippets from the findings. Do NOT include a "source_list" block here (that is assembled later).
-2. Write a "compressed_summary": exactly 2–3 dense sentences summarizing this section's key findings and numbers, for use by a parent section. Be concise and factual.
+1. Produce 2–8 content blocks for THIS section—as many as needed to cover the section in depth. Use substantive "text" blocks with inline citations [1], [2]. When this section's content has comparable items (e.g. features, pricing, options) or numeric data (benchmarks, trends), add "table" or "chart" blocks with that real data—do not add filler. Use "code" only for actual snippets from the findings. Do NOT include a "source_list" block here (that is assembled later). Prefer depth over brevity.
+2. Write a "compressed_summary": one short paragraph (4–6 sentences) summarizing this section's key findings and numbers for use by a parent section. Be factual and include the main evidence.
 
 BLOCK TYPES: "text" (markdown, primary), "table" (when 3+ comparable items or real specs from findings), "chart" (when numeric/trend data from findings), "code" (actual code only). Cite sources as [1], [2] in markdown."""
 
@@ -58,13 +59,14 @@ SOURCES (cite using these indices in your blocks):
 
 Return a NodeDraft with:
 - blocks: list of content blocks for this section only (no source_list block)
-- compressed_summary: 2–3 sentence dense summary of this section's main findings for a parent section"""
+- compressed_summary: one short paragraph (4–6 sentences) of this section's main findings for a parent section"""
 
     response = llm_client.generate_structured(
         prompt=prompt,
         system_prompt=system_prompt,
         schema=NodeDraft,
         temperature=0.35,
+        max_tokens=max_tokens,
     )
 
     # Ensure local_sources is set from input (LLM may not populate it reliably)

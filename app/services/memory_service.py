@@ -49,18 +49,27 @@ class MemoryService:
 
     # ── API Key caching ──────────────────────────────────────────────
 
-    async def cache_api_key(self, user_id: str, api_key: str):
-        """Cache the user's decrypted API key in Redis (1 hour TTL)."""
+    def _api_key_cache_key(self, user_id: str, suffix: str | None = None) -> str:
+        """Redis key for API key cache. suffix=None for legacy single-key per user."""
+        if suffix:
+            return f"user:{user_id}:api_key:{suffix}"
+        return f"user:{user_id}:api_key"
+
+    async def cache_api_key(self, user_id: str, api_key: str, suffix: str | None = None):
+        """Cache the user's decrypted API key in Redis (1 hour TTL). suffix = provider for multi-provider."""
         await self.redis.setex(
-            f"user:{user_id}:api_key",
-            3600,  # 1 hour
+            self._api_key_cache_key(user_id, suffix),
+            3600,
             api_key,
         )
 
-    async def get_cached_api_key(self, user_id: str) -> str | None:
-        """Retrieve the cached API key, or None if expired/missing."""
-        result = await self.redis.get(f"user:{user_id}:api_key")
-        return result.decode() if result else None
+    async def get_cached_api_key(self, user_id: str, suffix: str | None = None) -> str | None:
+        """Retrieve the cached API key, or None if expired/missing. suffix = provider for multi-provider."""
+        key = self._api_key_cache_key(user_id, suffix)
+        result = await self.redis.get(key)
+        if result is None:
+            return None
+        return result.decode() if isinstance(result, bytes) else result
 
     # ── User preferences cache ───────────────────────────────────────
 

@@ -18,21 +18,30 @@ class GeminiClient(BaseLLMClient):
         self.client = genai.Client(api_key=api_key) if api_key else genai.Client()
         self.model_name = model_name
 
-    def generate_structured(self, prompt: str, system_prompt: str, schema: type[BaseModel], temperature: float = 0.2) -> BaseModel:
+    def generate_structured(
+        self,
+        prompt: str,
+        system_prompt: str,
+        schema: type[BaseModel],
+        temperature: float = 0.2,
+        max_tokens: int | None = None,
+    ) -> BaseModel:
         """
         Calls the Gemini API and returns a parsed Pydantic object matching the schema.
         """
+        config_kw: dict = {
+            "system_instruction": system_prompt,
+            "response_mime_type": "application/json",
+            "response_schema": schema,
+            "temperature": temperature,
+        }
+        if max_tokens is not None:
+            config_kw["max_output_tokens"] = max_tokens
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                response_mime_type="application/json",
-                response_schema=schema,
-                temperature=temperature,
-            ),
+            config=types.GenerateContentConfig(**config_kw),
         )
-        # response.parsed automatically contains the populated Pydantic object
         return response.parsed
 
     def generate_text(self, prompt: str, system_prompt: str, temperature: float = 0.5) -> str:

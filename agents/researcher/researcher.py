@@ -57,7 +57,8 @@ class ResearcherAgent:
         self.vector_store = vector_store
         self.collection_name = collection_name
         self.config = config or ReportConfig.STANDARD()
-        self.tool_executor = ToolExecutor()
+        max_tavily = getattr(self.config, "max_tavily_calls", 0) or 0
+        self.tool_executor = ToolExecutor(max_tavily_calls=max_tavily if max_tavily > 0 else None)
 
     async def populate(
         self,
@@ -106,6 +107,8 @@ class ResearcherAgent:
         gap_query: str,
         original_goal: str,
         progress_callback: Optional[Callable[[str, dict], Awaitable[None]]] = None,
+        *,
+        compute_gaps: bool = True,
     ) -> tuple[KnowledgeItem, GapAnalysis]:
         """
         Uses embeddings to fetch context, synthesizes an answer, and asks the LLM
@@ -164,16 +167,20 @@ class ResearcherAgent:
             except Exception:
                 pass
 
-        # 4. Judge and extract gaps
-        logger.debug("Judging resolution for remaining gaps.")
-        gap_response = await asyncio.to_thread(
-            get_gaps,
-            original_goal=original_goal,
-            current_topic=gap_query,
-            findings=answer,
-            llm_client=self.llm_client,
-            max_probes=self.config.max_probes,
-        )
+        # 4. Judge and extract gaps (optional)
+        # If we won't expand the tree further (e.g. leaf depth), skip the extra LLM call.
+        if compute_gaps and self.config.max_probes > 0:
+            logger.debug("Judging resolution for remaining gaps.")
+            gap_response = await asyncio.to_thread(
+                get_gaps,
+                original_goal=original_goal,
+                current_topic=gap_query,
+                findings=answer,
+                llm_client=self.llm_client,
+                max_probes=self.config.max_probes,
+            )
+        else:
+            gap_response = GapAnalysis(gaps=[], is_complete=True)
 
         return item, gap_response
 
@@ -263,28 +270,26 @@ class ResearcherAgent:
         return tool_map
 
     def _threshold_filter(
-        self, gaps: List[Gap], mean_epsilon: float = 0.5
+        self, gaps: List[Gap], drop_bottom_fraction: float = 0.25
     ) -> List[Gap]:
         """
-        Filter out low-severity gaps using a mean-epsilon threshold.
+        Drop the lowest-severity 25% of gaps; keep the top 75%.
         """
-        if not gaps:
+        if not gaps or drop_bottom_fraction <= 0:
+            return list(gaps)
+        if drop_bottom_fraction >= 1:
             return []
-        
-        avg_severity = sum(g.severity for g in gaps) / len(gaps)
 
-        threshold = avg_severity - mean_epsilon
+        sorted_gaps = sorted(gaps, key=lambda g: g.severity, reverse=True)
+        keep_count = max(1, int(len(sorted_gaps) * (1 - drop_bottom_fraction)))
+        surviving = sorted_gaps[:keep_count]
 
-        surviving = [g for g in gaps if g.severity >= threshold]
-        
         logger.debug(
-            "Filtered gaps: %s -> %s (avg_sev=%.1f, thresh=%.1f)",
+            "Filtered gaps: %s -> %s (dropped bottom %.0f%%)",
             len(gaps),
             len(surviving),
-            avg_severity,
-            threshold,
+            drop_bottom_fraction * 100,
         )
-        
         return surviving
 
     async def is_duplicate(self, query: str) -> bool:

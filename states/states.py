@@ -16,7 +16,7 @@ class NodeDraft(BaseModel):
     """Per-node write output: content blocks plus a dense summary for parent synthesis."""
     node_topic: str = Field(description="The research topic this draft covers.")
     blocks: List[ContentBlock] = Field(default_factory=list, description="Content blocks for this node.")
-    compressed_summary: str = Field(description="Dense 2-3 sentence summary for use by parent section.")
+    compressed_summary: str = Field(description="One short paragraph (4-6 sentences) summarizing this section for use by a parent section.")
     local_sources: List[str] = Field(default_factory=list, description="Source URLs cited in this node (pre-global remap).")
 
 

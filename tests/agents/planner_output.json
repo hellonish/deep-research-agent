@@ -1,0 +1,29 @@
+{
+  "plan": [
+    {
+      "step_number": 1,
+      "action": "Research AegisAI's company overview and core offerings",
+      "description": "Find and verify basic information about AegisAI, including its founding date, location, mission statement, and primary products or services. Look at the company's official website, press releases, and business directories like Crunchbase or LinkedIn. Extract details about what AegisAI does, its target industries, and any high-level descriptions of its solutions. Completion criterion: A clear summary of AegisAI's identity and main offerings."
+    },
+    {
+      "step_number": 2,
+      "action": "Identify specific problem domains AegisAI addresses",
+      "description": "Investigate the types of problems AegisAI claims to solve, such as cybersecurity threats, data analysis challenges, or automation inefficiencies. Use sources like case studies, whitepapers, and product documentation from AegisAI's website, as well as industry reports and tech news articles. Extract examples of problem statements and how AegisAI's solutions apply to them. Completion criterion: A list of problem domains with brief explanations."
+    },
+    {
+      "step_number": 3,
+      "action": "Analyze customer testimonials and case studies",
+      "description": "Review customer feedback, testimonials, and detailed case studies to understand real-world applications of AegisAI's solutions. Look for sources on the company's website, review platforms like G2 or Capterra, and business publications. Extract specific problems solved for clients, outcomes achieved, and any metrics or success stories mentioned. Completion criterion: A compilation of verified customer problems and solutions provided by AegisAI."
+    },
+    {
+      "step_number": 4,
+      "action": "Examine technical and industry context of AegisAI's solutions",
+      "description": "Research the technological underpinnings and industry relevance of AegisAI's offerings, such as AI/ML techniques, software platforms, or integration capabilities. Use technical blogs, academic papers if available, and industry analysis from sources like TechCrunch or Forbes. Extract information on how AegisAI's technology addresses problems in contexts like IT, finance, or healthcare. Completion criterion: An overview of the technical and industry-specific aspects of AegisAI's problem-solving approach."
+    },
+    {
+      "step_number": 5,
+      "action": "Compare AegisAI with competitors and market trends",
+      "description": "Investigate how AegisAI's problem-solving capabilities compare to similar companies and current market trends. Look at competitor websites, market research reports, and news articles covering the AI or software industry. Extract insights into AegisAI's unique value proposition, common problems in the sector, and how it differentiates itself. Completion criterion: A comparison highlighting AegisAI's problem-solving strengths and market position."
+    }
+  ]
+}

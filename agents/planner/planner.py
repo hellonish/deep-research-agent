@@ -1,6 +1,7 @@
 from llm import BaseLLMClient
-from models import ResearchPlan
-from prompts import get_plan
+from models import ResearchPlan, ScopedPlan
+from prompts import get_plan, get_scoped_plan
+
 
 class PlannerAgent:
     """
@@ -31,3 +32,10 @@ class PlannerAgent:
         
         plan = get_plan(user_query, self.llm_client, num_plan_steps=num_plan_steps)
         return plan
+
+    def create_scoped_plan(self, user_query: str, num_plan_steps: int = 5) -> ScopedPlan:
+        """
+        Generates a research plan plus clarifying questions for the user.
+        Use this to scope the research before running the full pipeline.
+        """
+        return get_scoped_plan(user_query, self.llm_client, num_plan_steps=num_plan_steps)

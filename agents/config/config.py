@@ -54,16 +54,19 @@ class ReportConfig:
     rag_top_k: int           # Number of vector store results for gap analysis
     writer_mode: str = "single"   # "single" = one-shot get_write; "bottomup" = per-node + exec summary
     writer_rag_top_k: int = 8    # Vector store results per section when writer_mode is bottomup (unused in single)
+    writer_section_max_tokens: int = 4096   # Max tokens per section in bottom-up mode (enables longer sections)
+    writer_report_max_tokens: int = 16384  # Max tokens for single-shot full report
+    max_tavily_calls: int = 0   # Per-job cap on Tavily API calls (0 = no cap). After cap, use DuckDuckGo.
 
     @classmethod
     def COMPACT(cls):
-        return cls(name="Compact", num_plan_steps=2, max_depth=2, max_probes=2, max_tool_pairs=2, dupe_threshold=0.92, rag_top_k=3, writer_mode="single", writer_rag_top_k=5)
+        return cls(name="Compact", num_plan_steps=2, max_depth=2, max_probes=2, max_tool_pairs=2, dupe_threshold=0.92, rag_top_k=3, writer_mode="single", writer_rag_top_k=5, writer_section_max_tokens=2048, writer_report_max_tokens=8192, max_tavily_calls=10)
 
     @classmethod
     def STANDARD(cls):
-        return cls(name="Standard", num_plan_steps=5, max_depth=4, max_probes=3, max_tool_pairs=3, dupe_threshold=0.85, rag_top_k=5, writer_mode="bottomup", writer_rag_top_k=8)
+        return cls(name="Standard", num_plan_steps=5, max_depth=4, max_probes=3, max_tool_pairs=3, dupe_threshold=0.85, rag_top_k=5, writer_mode="bottomup", writer_rag_top_k=8, writer_section_max_tokens=4096, writer_report_max_tokens=16384, max_tavily_calls=25)
 
     @classmethod
     def DEEP(cls):
-        return cls(name="Deep", num_plan_steps=10, max_depth=6, max_probes=5, max_tool_pairs=4, dupe_threshold=0.6, rag_top_k=8, writer_mode="bottomup", writer_rag_top_k=10)
+        return cls(name="Deep", num_plan_steps=10, max_depth=6, max_probes=5, max_tool_pairs=4, dupe_threshold=0.6, rag_top_k=8, writer_mode="bottomup", writer_rag_top_k=10, writer_section_max_tokens=6144, writer_report_max_tokens=32768, max_tavily_calls=50)
 

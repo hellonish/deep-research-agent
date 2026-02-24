@@ -16,9 +16,17 @@ from agents.researcher import ResearcherAgent
 from agents.writer import WriterAgent
 from agents.config import ReportConfig
 from states import ResearchNode
-from models import ResearchReport
+from models import ResearchReport, PlanStep
 
 logger = logging.getLogger(__name__)
+
+
+def _steps_to_root_nodes(steps: List[PlanStep]) -> List[ResearchNode]:
+    """Build root ResearchNodes from a list of PlanStep (normalized at API boundary)."""
+    return [
+        ResearchNode(topic=step.description[:500], depth=0, node_id=str(i))
+        for i, step in enumerate(steps)
+    ]
 
 
 class OrchestratorAgent:
@@ -83,64 +91,82 @@ class OrchestratorAgent:
         self,
         user_query: str,
         progress_callback: Optional[Callable[[str, dict], Awaitable[None]]] = None,
+        initial_plan: Optional[List[PlanStep]] = None,
+        user_context: Optional[str] = None,
     ) -> ResearchReport:
         """
-        Runs the full research pipeline (Plan -> Level BFS -> Write) for a given query.
+        Runs the full pipeline: Plan -> execute research tree (Researcher) -> Write.
 
-        Returns:
-            ResearchReport: The synthesized report with citations and content blocks.
+        If initial_plan is provided (e.g. from research scoping), the planner is skipped.
+        If user_context is provided, it is prepended to the query for scoping.
         """
-        logger.info("Starting pipeline for: '%s'", user_query)
+        effective_query = (user_context.strip() + "\n\n" + user_query.strip()).strip() if user_context else user_query
+        logger.info("Starting pipeline for: '%s'", effective_query[:80] if effective_query else "")
 
-        # 1. Plan
-        plan_response = self.planner.create_plan(
-            user_query,
-            num_plan_steps=self.config.num_plan_steps,
+        # 1. Plan: root nodes from initial_plan or from planner
+        root_nodes = await self._plan(effective_query, initial_plan, progress_callback)
+
+        # 2. Execute research tree: level-by-level BFS using Researcher
+        await self._execute_research_tree(root_nodes, effective_query, progress_callback)
+
+        # 3. Write: synthesize tree into report
+        logger.info("BFS complete. Writing final report.")
+        report = await self.writer.write(
+            effective_query, root_nodes, progress_callback=progress_callback
         )
-        logger.info("Planner produced %s initial topics.", len(plan_response.plan))
+        logger.info("Report generation complete.")
+        return report
 
-        # 2. Build root nodes with node_id
-        root_nodes: List[ResearchNode] = [
-            ResearchNode(topic=step.description, depth=0, node_id=str(i))
-            for i, step in enumerate(plan_response.plan)
-        ]
-
+    async def _plan(
+        self,
+        effective_query: str,
+        initial_plan: Optional[List[PlanStep]],
+        progress_callback: Optional[Callable[[str, dict], Awaitable[None]]],
+    ) -> List[ResearchNode]:
+        """Produce root ResearchNodes: from initial_plan or by calling the planner."""
+        if initial_plan:
+            root_nodes = _steps_to_root_nodes(initial_plan)
+            logger.info("Using provided plan with %s steps (scoping).", len(root_nodes))
+        else:
+            plan_response = self.planner.create_plan(
+                effective_query,
+                num_plan_steps=self.config.num_plan_steps,
+            )
+            logger.info("Planner produced %s initial topics.", len(plan_response.plan))
+            root_nodes = [
+                ResearchNode(topic=step.description, depth=0, node_id=str(i))
+                for i, step in enumerate(plan_response.plan)
+            ]
         if progress_callback:
             await progress_callback("plan_ready", {
                 "probes": [{"node_id": n.node_id, "probe": n.topic[:200]} for n in root_nodes],
                 "count": len(root_nodes),
             })
+        return root_nodes
 
-        # 3. Level-based BFS
+    async def _execute_research_tree(
+        self,
+        root_nodes: List[ResearchNode],
+        user_query: str,
+        progress_callback: Optional[Callable[[str, dict], Awaitable[None]]] = None,
+    ) -> None:
+        """
+        Run level-by-level BFS over the research tree. For each level: filter (max_depth,
+        visited, duplicates), process nodes in parallel via Researcher (populate + resolve),
+        then build the next level from gap children. Mutates nodes in place (knowledge, children).
+        """
         visited: set = set()
         level: List[ResearchNode] = list(root_nodes)
         next_id = len(root_nodes)
 
         while level:
-            # Filter: skip max_depth, already visited; for depth >= 1 run is_duplicate
             to_process: List[ResearchNode] = []
-            if level[0].depth >= 1:
-                dupes = await asyncio.gather(
-                    *[self.researcher.is_duplicate(n.topic) for n in level]
-                )
-                for n, is_dup in zip(level, dupes):
-                    if n.depth >= self.config.max_depth or n.topic in visited:
-                        continue
-                    if is_dup:
-                        logger.info(
-                            "Node '%s...' is a semantic duplicate. Skipping.",
-                            n.topic[:30],
-                        )
-                        visited.add(n.topic)
-                        continue
-                    visited.add(n.topic)
-                    to_process.append(n)
-            else:
-                for n in level:
-                    if n.depth >= self.config.max_depth or n.topic in visited:
-                        continue
-                    visited.add(n.topic)
-                    to_process.append(n)
+            # No semantic duplicate check: only max_depth and exact-topic visited filter.
+            for n in level:
+                if n.depth >= self.config.max_depth or n.topic in visited:
+                    continue
+                visited.add(n.topic)
+                to_process.append(n)
 
             if not to_process:
                 level = []
@@ -165,7 +191,6 @@ class OrchestratorAgent:
                     "completed": [{"node_id": n.node_id, "probe": n.topic[:200]} for n in to_process],
                 })
 
-            # Build next level and assign node_id to children
             next_level: List[ResearchNode] = []
             for node in to_process:
                 for child in node.children:
@@ -173,14 +198,6 @@ class OrchestratorAgent:
                     next_id += 1
                     next_level.append(child)
             level = next_level
-
-        # 4. Write synthesis
-        logger.info("BFS complete. Writing final report.")
-        report = await self.writer.write(
-            user_query, root_nodes, progress_callback=progress_callback
-        )
-        logger.info("Report generation complete.")
-        return report
 
     async def _process_node(
         self,
@@ -202,8 +219,14 @@ class OrchestratorAgent:
 
         await self.researcher.populate(node.topic, progress_callback=progress_callback)
 
+        # Avoid spending an extra LLM call on gap analysis when children would not execute anyway.
+        # Children are depth=node.depth+1 and the executor skips nodes where depth >= max_depth.
+        can_expand = (node.depth + 1) < self.config.max_depth
         knowledge_item, gap_response = await self.researcher.resolve(
-            node.topic, user_query, progress_callback=progress_callback
+            node.topic,
+            user_query,
+            progress_callback=progress_callback,
+            compute_gaps=can_expand,
         )
 
         node.knowledge = knowledge_item

@@ -1,24 +1,25 @@
 """
-Gemini-only LLM router — creates a GeminiClient with the user's API key and model.
+LLM router — returns the appropriate client (Gemini or DeepSeek) for the given model_id.
 """
+from llm.base import BaseLLMClient
 from llm.gemini import GeminiClient
+from llm.deepseek import DeepSeekClient
 
 
-def get_llm_client(model_id: str, api_key: str | None = None) -> GeminiClient:
+def get_llm_client(model_id: str, api_key: str | None = None) -> BaseLLMClient:
     """
-    Factory: returns a GeminiClient initialized with the user's API key
-    and their selected model.
+    Factory: returns GeminiClient or DeepSeekClient based on model_id.
 
     Args:
-        model_id: The Gemini model name (e.g., "gemini-2.0-flash" or "models/gemini-2.5-pro").
-        api_key: The user's Gemini API key. If None, falls back to env var.
+        model_id: Model identifier (e.g. "gemini-2.5-flash", "deepseek-chat").
+        api_key: The user's API key for that provider. If None, client may use env default.
 
     Returns:
-        GeminiClient configured for the specified model.
+        Configured LLM client for the model's provider.
     """
-    # Normalize: SDK expects "models/..." format for some operations,
-    # but generate_content works with both formats
     if model_id.startswith("models/"):
         model_id = model_id.replace("models/", "", 1)
-
+    n = model_id.lower().strip()
+    if n.startswith("deepseek-"):
+        return DeepSeekClient(model_name=model_id, api_key=api_key)
     return GeminiClient(model_name=model_id, api_key=api_key)

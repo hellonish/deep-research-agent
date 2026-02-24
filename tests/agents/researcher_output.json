@@ -1,0 +1,33 @@
+{
+  "topic": "Find and verify basic information about AegisAI, including its founding date, location, mission statement, and primary products or services. Look at the company's official website, press releases, and business directories like Crunchbase or LinkedIn. Extract details about what AegisAI does, its target industries, and any high-level descriptions of its solutions. Completion criterion: A clear summary of AegisAI's identity and main offerings.",
+  "user_query": "Research AegisAI and what kind of problems they solve.",
+  "step_index": 0,
+  "knowledge_item": {
+    "source": "Agent Resolution",
+    "content": "Based on a synthesis of the provided evidence, AegisAI is a cybersecurity startup specializing in AI-driven email security. The following is a detailed and verified summary of its identity and main offerings.\n\n### **Company Identity & Founding**\n\n*   **Founding Date:** AegisAI was founded in **2025** (Source Fragment: 0.75, 0.70, 0.53).\n*   **Location:** While a specific headquarters city is not explicitly stated in the provided evidence, the company's public launch press release was issued from **New York** on September 10, 2025 (Source Fragment: 0.53).\n*   **Founders & Background:** The company was founded by **Cy Khormaee and Ryan Luo**, former product leaders and engineers from **Google's Safe Browsing and reCAPTCHA teams** (Source Fragment: 0.53). The founders emphasize their collective **over 25 years of combined experience** working on email security at Google (Source Fragment: 0.33).\n*   **Funding:** At its public launch in September 2025, AegisAI announced a **$13 million seed funding round** led by venture capital firms **Accel and Foundation Capital** (Source Fragment: 0.53).\n\n### **Mission Statement & Core Philosophy**\n\nThe company's mission is centered on redefining email security through autonomous artificial intelligence. The evidence points to a mission of building **\"intelligent, adaptive systems that can learn and evolve just as fast as the threats they’re facing\"** (Source Fragment: 0.33). This is driven by the belief that traditional security tools create operational burden through excessive alerts.\n\nAs stated by CTO and Co-Founder Ryan Luo: **\"Our mission is to protect organizations without adding operational burden and to give security teams the reliable intelligence they need to focus on what matters most\"** (Source Fragment: 0.53). The overarching goal, or \"promise,\" is **\"building a future where communication is safe by default and trust can scale\"** (Source Fragment: 0.33).\n\n### **Primary Product & Services**\n\nAegisAI's core offering is a **next-generation, autonomous email security platform** (Source Fragment: 0.53, 0.46).\n\n*   **Core Technology:** The platform uses **\"self-driving AI agents\"** that analyze each email with the depth and reasoning of a human security analyst (Source Fragment: 0.46). These agents continuously learn from real-world adversarial behavior and share threat intelligence across organizations (Source Fragment: 0.53).\n*   **Key Capabilities:** The AI agents are designed to autonomously **detect and respond** to a wide spectrum of email-borne threats, specifically:\n    *   **Phishing** (including zero-day and spear-phishing)\n    *   **Malware** attacks\n    *   **Business Email Compromise (BEC)** and executive impersonation\n    *   **Social engineering** tactics (Source Fragment: 0.53, 0.33)\n*   **Key Differentiator & Performance:** The company claims its AI-driven approach results in a radical reduction of false positives—**up to 90% compared to traditional, rule-based email security solutions**—while proactively eliminating threats before they reach the end user's inbox (Source Fragment: 0.53).\n*   **Deployment & Integration:** The platform is designed for seamless integration with major enterprise email ecosystems via API, specifically **Microsoft 365 and Google Workspace** (Source Fragment: 0.53).\n\n### **Target Industry & Solution Description**\n\nAegisAI targets the **enterprise cybersecurity market**, with a sharp focus on solving the endemic security vulnerabilities of business email. The company identifies email as **\"the single most common entry point for attackers\"** and **\"the front door to the enterprise\"** (Source Fragment: 0.33). Its solution is positioned for organizations of any size that use Microsoft 365 or Google Workspace and seek to replace or augment traditional Secure Email Gateways (SEGs) with a more accurate, autonomous, and operationally efficient AI platform. The high-level description of its solution is an AI-powered security layer that treats **\"every inbox like a dynamic, high-value environment that deserves real-time, AI-powered protection\"** (Source Fragment: 0.33).\n\n**Note on Conflicting Evidence:** One source fragment (0.75) describes an \"AegisAI\" operating a modular AI network for blockchain platforms. This description is fundamentally incompatible in technology, mission, and founding narrative with the extensive, detailed evidence from the press release (0.53) and official website content (0.33, 0.46) pertaining to the cybersecurity startup. This suggests the existence of multiple entities with the same name. The resolution above is based on the preponderance of consistent, detailed evidence related to the **cybersecurity company** founded by former Google executives Cy Khormaee and Ryan Luo. Its official website is confirmed as **aegisai.ai** (Source Fragment: 0.70).",
+    "summary": "Resolved details for: Find and verify basic information about AegisAI, i",
+    "sources": [
+      "https://www.thecompanycheck.com/company/b/aegisai/wz3famxf4st0ca9i7",
+      "https://natlawreview.com/press-releases/google-security-veterans-raise-13m-seed-round-aegisai-fix-email-security",
+      "https://www.crunchbase.com/organization/aegisai",
+      "https://www.aegisai.ai/blog/why-aegisai"
+    ]
+  },
+  "gap_analysis": {
+    "gaps": [
+      {
+        "query": "What specific industries or sectors (e.g., finance, healthcare, technology) does AegisAI primarily serve or have case studies for, beyond the general enterprise cybersecurity market?",
+        "severity": 6.0
+      },
+      {
+        "query": "What are the pricing models or tiers for AegisAI's email security platform, and are there any publicly available customer testimonials or success metrics?",
+        "severity": 7.0
+      },
+      {
+        "query": "How does AegisAI's AI technology specifically handle data privacy and compliance with regulations like GDPR or HIPAA, given its integration with major email platforms?",
+        "severity": 8.0
+      }
+    ],
+    "is_complete": false
+  }
+}

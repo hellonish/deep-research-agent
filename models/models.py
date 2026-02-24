@@ -27,6 +27,16 @@ class ResearchPlan(BaseModel):
     plan: List[PlanStep] = Field(description="The sequential list of steps required to complete the research.")
 
 
+class ScopedPlan(BaseModel):
+    """Plan plus clarifying questions to reduce ambiguity and hallucinations."""
+    query_type: QueryType = Field(description="The categorized domain of the research query.")
+    plan: List[PlanStep] = Field(description="The sequential list of steps required to complete the research.")
+    clarifying_questions: List[str] = Field(
+        default_factory=list,
+        description="Questions for the user to narrow scope, clarify intent, or provide context (e.g. time range, geography, depth).",
+    )
+
+
 # ── Vector Store Models ────────────────────────────────────────────────
 
 class Document(BaseModel):

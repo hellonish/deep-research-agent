@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 from app.core.config import settings
 from app.db.database import async_session
 from app.db.models import ResearchJob
-from app.services.api_key_service import resolve_api_key
+from app.services.api_key_service import resolve_api_key_for_model
 from app.services.memory_service import MemoryService
 from llm.router import get_llm_client
 from agents.config.config import ReportConfig
+from models import PlanStep
 
 
 class ResearchProgressEmitter:
@@ -73,6 +74,9 @@ async def run_research_job(
     model_id: str,
     config: dict,
     redis_client,
+    *,
+    refined_plan: list[PlanStep] | None = None,
+    user_context: str | None = None,
 ):
     """
     Background task: runs the full Wort Orchestrator pipeline.
@@ -85,7 +89,7 @@ async def run_research_job(
 
     async with async_session() as db:
         try:
-            api_key = await resolve_api_key(user_id, memory, db)
+            api_key = await resolve_api_key_for_model(user_id, model_id, memory, db)
             llm = get_llm_client(model_id, api_key=api_key)
 
             from vector_store.qdrant_store import QdrantStore
@@ -130,6 +134,7 @@ async def run_research_job(
                 max_tool_pairs=config.get("max_tool_pairs", base_config.max_tool_pairs),
                 dupe_threshold=config.get("dupe_threshold", base_config.dupe_threshold),
                 rag_top_k=config.get("rag_top_k", base_config.rag_top_k),
+                max_tavily_calls=config.get("max_tavily_calls", base_config.max_tavily_calls),
             )
 
             orchestrator = OrchestratorAgent(
@@ -142,7 +147,16 @@ async def run_research_job(
             async def on_progress(event_type: str, data: dict):
                 await emitter.emit(event_type, data)
 
-            report = await orchestrator.run(query, progress_callback=on_progress)
+            # refined_plan and user_context are normalized at API boundary (PlanStep list)
+            report = await orchestrator.run(
+                query,
+                progress_callback=on_progress,
+                initial_plan=refined_plan,
+                user_context=user_context,
+            )
+
+            if report is None:
+                raise ValueError("Report generation failed (no output from model).")
 
             await emitter.writing()
 

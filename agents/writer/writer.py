@@ -20,6 +20,15 @@ from agents.config import ReportConfig
 logger = logging.getLogger(__name__)
 
 
+def _fallback_report(reason: str = "Report generation failed.") -> ResearchReport:
+    """Return a valid report when the LLM returns None or writing fails (e.g. API limits)."""
+    return ResearchReport(
+        title="Report Generation Unavailable",
+        summary=reason + " This can happen when provider limits are exceeded or the model returned no valid output. Try again later or with a smaller scope.",
+        blocks=[],
+    )
+
+
 def _flatten_drafts_preorder(draft: NodeDraft, child_trees: List[Tuple[NodeDraft, list]]) -> List[NodeDraft]:
     """Flatten (draft, child_trees) in pre-order to a list of NodeDraft."""
     out: List[NodeDraft] = [draft]
@@ -109,8 +118,16 @@ class WriterAgent:
                 child_summaries=child_summaries,
                 user_query=user_query,
                 llm_client=self.llm_client,
+                max_tokens=self.config.writer_section_max_tokens,
             )
         draft = await asyncio.to_thread(_call)
+        if draft is None:
+            draft = NodeDraft(
+                node_topic=node.topic,
+                blocks=[],
+                compressed_summary="(Section could not be generated.)",
+                local_sources=own_sources,
+            )
         if progress_callback:
             await progress_callback(
                 "section_complete",
@@ -187,7 +204,15 @@ class WriterAgent:
                 llm_client=self.llm_client,
             )
 
-        title, summary = await asyncio.to_thread(_exec_summary)
+        try:
+            title, summary = await asyncio.to_thread(_exec_summary)
+            if not title or not summary:
+                title = title or "Research Report"
+                summary = summary or "Report summary could not be generated."
+        except Exception as e:
+            logger.warning("Executive summary failed: %s", e)
+            title = "Research Report"
+            summary = "Report summary could not be generated (e.g. provider limits). Findings below may be partial."
 
         if global_sources:
             merged_blocks.append(
@@ -238,9 +263,13 @@ class WriterAgent:
                 knowledge_digest=knowledge_digest,
                 sources_str=sources_str,
                 llm_client=self.llm_client,
+                max_tokens=self.config.writer_report_max_tokens,
             )
 
         report = await asyncio.to_thread(call_llm)
+        if report is None:
+            logger.warning("Single-shot writer returned None (e.g. API limits or empty response).")
+            return _fallback_report("The model returned no report.")
         logger.info(
             "Report generated: '%s' with %s blocks",
             report.title,

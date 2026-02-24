@@ -41,5 +41,7 @@ export interface AuthResponse {
 export interface ModelOption {
     id: string;
     name: string;
-    description: string;
+    description?: string;
+    provider?: string;
+    display_name?: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from '@/components/AuthProvider';
-import { getResearchResult, getChatMessages, streamChat } from '@/apis';
+import { getResearchResult, getChatMessages, streamChat, streamResearchProgress, type ResearchProgressEvent } from '@/apis';
 import { Message } from '@/lib/types';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +33,7 @@ export default function ResearchJobPage() {
     const logsEndRef = useRef<HTMLDivElement>(null);
     const chatMessagesEndRef = useRef<HTMLDivElement>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const streamAbortRef = useRef<AbortController | null>(null);
 
     const fetchReport = async () => {
         try {
@@ -47,6 +48,11 @@ export default function ResearchJobPage() {
             }
         } catch (err) {
             console.error('Fetch report error:', err);
+            const is404 = err instanceof Error && (err.message === 'Research job not found' || err.message.includes('not found'));
+            if (is404) {
+                setStatus('failed');
+                setErrorMsg('Job not found. It may have been created in another session or the link is invalid.');
+            }
         }
     };
 
@@ -79,12 +85,57 @@ export default function ResearchJobPage() {
                 }
 
                 setStatus('running');
-                addLog('System', 'Research in progress…', 0);
+                addLog('Phase', 'Research in progress…', 0);
                 pollRef.current = setInterval(fetchReport, 2500);
+
+                // Subscribe to live progress stream
+                const abort = new AbortController();
+                streamAbortRef.current = abort;
+                streamResearchProgress(jobId, token, (event: ResearchProgressEvent) => {
+                    const depth = typeof event.depth === 'number' ? event.depth : 0;
+                    if (event.type === 'phase_start') {
+                        addLog('Phase', (event.message as string) || event.phase as string, 0);
+                    } else if (event.type === 'plan_ready') {
+                        const count = event.count as number;
+                        addLog('Planner', `Plan ready: ${count} probes`, 0);
+                    } else if (event.type === 'level_start') {
+                        const d = event.depth as number;
+                        const total = event.total_in_level as number;
+                        addLog('Orchestrator', `Depth ${d}: ${total} probes`, d);
+                    } else if (event.type === 'probe_start') {
+                        const probe = (event.probe as string)?.slice(0, 80) || 'Probe';
+                        addLog('Researcher', probe + (probe.length >= 80 ? '…' : ''), depth);
+                    } else if (event.type === 'tool_call') {
+                        const tool = event.tool as string;
+                        const query = (event.query as string)?.slice(0, 60) || '';
+                        addLog('Tool', `${tool}: ${query}`, depth + 1);
+                    } else if (event.type === 'thinking') {
+                        addLog('LLM', (event.message as string) || 'Synthesizing…', depth);
+                    } else if (event.type === 'probe_complete') {
+                        addLog('Researcher', 'Probe complete', depth);
+                    } else if (event.type === 'level_complete') {
+                        addLog('Orchestrator', 'Level complete', depth);
+                    } else if (event.type === 'writing') {
+                        addLog('Publisher', (event.message as string) || 'Composing report…', 0);
+                    } else if (event.type === 'complete') {
+                        addLog('Phase', 'Synthesis complete', 0);
+                        setStatus('complete');
+                        fetchReport();
+                    } else if (event.type === 'error') {
+                        addLog('Error', (event.message as string) || 'Error', 0);
+                        setStatus('failed');
+                        setErrorMsg((event.message as string) || 'System failure');
+                    }
+                }, abort.signal).catch((err: unknown) => {
+                    if (err instanceof Error && err.name !== 'AbortError') console.error('Research stream error:', err);
+                }).finally(() => {
+                    streamAbortRef.current = null;
+                });
             } catch (err) {
                 console.error('Failed to fetch initial status:', err);
+                const is404 = err instanceof Error && (err.message === 'Research job not found' || err.message.includes('not found'));
                 setStatus('failed');
-                setErrorMsg('Failed to load job');
+                setErrorMsg(is404 ? 'Job not found. It may have been created in another session or the link is invalid.' : 'Failed to load job');
             }
         };
 
@@ -94,6 +145,10 @@ export default function ResearchJobPage() {
             if (pollRef.current) {
                 clearInterval(pollRef.current);
                 pollRef.current = null;
+            }
+            if (streamAbortRef.current) {
+                streamAbortRef.current.abort();
+                streamAbortRef.current = null;
             }
         };
     }, [jobId, token]);

@@ -1,4 +1,5 @@
 from .get_plan import get_plan
+from .get_scoped_plan import get_scoped_plan
 from .get_gaps import get_gaps
 from .get_tool_map import get_tool_map
 from .get_synthesis import get_synthesis
@@ -10,6 +11,7 @@ from .get_web_search_decision import get_web_search_decision
 
 __all__ = [
     "get_plan",
+    "get_scoped_plan",
     "get_gaps",
     "get_tool_map",
     "get_synthesis",

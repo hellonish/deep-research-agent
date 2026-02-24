@@ -4,7 +4,7 @@ SQLAlchemy ORM models for the Wort application.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Text, DateTime, JSON, ForeignKey, func
+from sqlalchemy import Column, String, Text, DateTime, JSON, ForeignKey, func, UniqueConstraint
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 from sqlalchemy.orm import relationship
 
@@ -24,7 +24,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=True)
     picture = Column(String, nullable=True)
-    gemini_api_key = Column(String, nullable=True)  # Fernet-encrypted
+    gemini_api_key = Column(String, nullable=True)  # Fernet-encrypted (legacy; prefer UserApiKey)
     selected_model = Column(String, default="gemini-2.0-flash")
     metadata_ = Column(JSON, nullable=True)  # Optional: {"preferences": {}, "facts": []}
     created_at = Column(DateTime, default=func.now())
@@ -32,6 +32,22 @@ class User(Base):
     # Relationships
     sessions = relationship("ChatSession", back_populates="user")
     research_jobs = relationship("ResearchJob", back_populates="user")
+    api_keys = relationship("UserApiKey", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserApiKey(Base):
+    """Per-user API keys by provider (gemini, deepseek, openai). Named by provider."""
+    __tablename__ = "user_api_keys"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String, nullable=False, index=True)  # "gemini" | "deepseek" | "openai"
+    encrypted_key = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_user_api_keys_user_provider"),)
+
+    user = relationship("User", back_populates="api_keys")
 
 
 class ChatSession(Base):

@@ -26,8 +26,9 @@ class Settings:
     # ── Encryption (Fernet key for API key storage) ──────────────────
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
 
-    # ── Gemini (server default for free-tier users) ──────────────────
+    # ── LLM providers (server defaults when user has no key) ─────────
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
     DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gemini-2.0-flash")
 
     # ── CORS ─────────────────────────────────────────────────────────
@@ -49,5 +50,24 @@ class Settings:
         "gemini-exp-1206",
     )
 
+    # DeepSeek: static list (no list API); keys validated on set.
+    DEEPSEEK_MODEL_IDS: tuple = (
+        "deepseek-chat",
+        "deepseek-reasoner",
+    )
+
+
+def _model_id_to_provider(model_id: str) -> str:
+    """Return provider string for a given model_id: gemini, deepseek, or openai."""
+    if not model_id:
+        return "gemini"
+    n = model_id.lower().replace("models/", "", 1).strip()
+    if n.startswith("deepseek-"):
+        return "deepseek"
+    if n.startswith("gpt-") or n.startswith("o1-"):
+        return "openai"
+    return "gemini"
+
 
 settings = Settings()
+model_id_to_provider = _model_id_to_provider

@@ -8,10 +8,18 @@ from .loaders import ArxivLoader, PDFLoader, TextLoader, HTMLLoader, DocxLoader
 class ToolExecutor:
     """
     Manages and executes all research tools with fallback logic.
+    Supports a per-job cap on Tavily calls to avoid burning through API quota.
     """
 
-    def __init__(self):
+    def __init__(self, max_tavily_calls: int | None = None):
+        """
+        Args:
+            max_tavily_calls: Max number of tavily_search calls per job (None or 0 = no cap).
+                              After cap, tavily_search is executed via DuckDuckGo instead.
+        """
         self.config = AgentConfig()
+        self._max_tavily = max_tavily_calls or 0
+        self._tavily_calls = 0
 
         # Search Tools
         self.tavily = TavilySearch(api_key=self.config.TAVILY_API_KEY) if self.config.TAVILY_API_KEY else None
@@ -34,7 +42,12 @@ class ToolExecutor:
             print(f"Executing tool: {tool_name} with args: {kwargs}")
 
             if tool_name == "tavily_search":
-                return await self.tavily.search(**kwargs) if self.tavily else await self.ddg.search(**kwargs)
+                if self._max_tavily > 0 and self._tavily_calls >= self._max_tavily:
+                    return await self.ddg.search(**kwargs)
+                if self.tavily:
+                    self._tavily_calls += 1
+                    return await self.tavily.search(**kwargs)
+                return await self.ddg.search(**kwargs)
 
             elif tool_name == "serpapi_search":
                 return await self.serpapi.search(**kwargs) if self.serpapi else "Error: SerpAPI key not configured."

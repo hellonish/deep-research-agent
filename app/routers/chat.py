@@ -22,10 +22,16 @@ from app.db.models import User, ChatSession, Message, ResearchJob
 from app.core.dependencies import get_current_user
 from app.middleware.rate_limit import check_rate_limit
 from app.schemas.chat import ChatRequest, ChatCreateResponse, WebSearchDecision
-from app.schemas.research import ResearchRequest, ResearchResponse
-from app.services.api_key_service import resolve_api_key
+from app.schemas.research import (
+    ResearchRequest,
+    ResearchResponse,
+    ResearchScopeRequest,
+    ResearchScopeResponse,
+)
+from app.services.api_key_service import resolve_api_key_for_model
 from app.services.memory_service import MemoryService, get_redis
 from app.services.research_service import run_research_job
+from agents.planner import PlannerAgent
 from llm.router import get_llm_client
 from prompts import get_chat_system_prompt_base, get_chat_research_context_suffix, get_web_search_decision
 
@@ -140,12 +146,11 @@ async def chat_stream(
     memory = MemoryService(redis)
     await check_rate_limit(user_id, redis, "chat", max_per_hour=200)
 
-    # Resolve API key and model
-    api_key = await resolve_api_key(user_id, memory, db)
     model_id = await _resolve_model(user_id, req.model_id, db)
+    api_key = await resolve_api_key_for_model(user_id, model_id, memory, db)
 
     if not api_key:
-        raise HTTPException(status_code=401, detail="No API key available")
+        raise HTTPException(status_code=401, detail="No API key available for this model. Add a key in Settings.")
 
     llm = get_llm_client(model_id, api_key=api_key)
 
@@ -244,6 +249,38 @@ async def chat_stream(
 SSE_KEEPALIVE_INTERVAL = 15
 
 
+@router.post("/research/scope", response_model=ResearchScopeResponse)
+async def research_scope(
+    req: ResearchScopeRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """
+    Create a research plan and clarifying questions only (no job).
+    User can refine the plan and provide answers, then POST /research with refined_plan and user_context.
+    """
+    memory = MemoryService(redis)
+    model_id = req.model_id
+    if not model_id:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        model_id = (user.selected_model if user else None) or settings.DEFAULT_MODEL
+    api_key = await resolve_api_key_for_model(user_id, model_id, memory, db)
+    llm = get_llm_client(model_id, api_key=api_key)
+    planner = PlannerAgent(llm_client=llm)
+    scoped = await asyncio.to_thread(
+        planner.create_scoped_plan,
+        req.query,
+        num_plan_steps=req.num_plan_steps,
+    )
+    return ResearchScopeResponse(
+        query_type=scoped.query_type.value,
+        plan=[{"step_number": s.step_number, "action": s.action, "description": s.description} for s in scoped.plan],
+        clarifying_questions=scoped.clarifying_questions or [],
+    )
+
+
 @router.post("/research")
 async def start_research(
     req: ResearchRequest,
@@ -272,7 +309,21 @@ async def start_research(
         user = result.scalar_one_or_none()
         model_id = (user.selected_model if user else None) or settings.DEFAULT_MODEL
 
-    config = req.config or {}
+    config = dict(req.config or {})
+    if req.refined_plan is not None:
+        config["refined_plan"] = req.refined_plan
+    if req.user_context is not None:
+        config["user_context"] = req.user_context
+
+    # Normalize refined_plan to PlanStep list at API boundary (orchestrator expects PlanStep only)
+    refined_plan_steps = None
+    if req.refined_plan:
+        from models import PlanStep
+        try:
+            refined_plan_steps = [PlanStep(**s) for s in req.refined_plan]
+        except Exception:
+            refined_plan_steps = None
+
     job = ResearchJob(
         user_id=user_id,
         session_id=session_id,
@@ -286,7 +337,11 @@ async def start_research(
 
     async def _run_with_logging():
         try:
-            await run_research_job(job.id, user_id, req.query, model_id, config, redis)
+            await run_research_job(
+                job.id, user_id, req.query, model_id, config, redis,
+                refined_plan=refined_plan_steps,
+                user_context=req.user_context,
+            )
         except Exception as e:
             logger.exception("Research background task failed for job_id=%s: %s", job.id, e)
 
@@ -298,6 +353,79 @@ async def start_research(
         yield f"data: {json.dumps({'type': 'started', 'job_id': job_id, 'session_id': session_id})}\n\n"
 
         queue: asyncio.Queue = asyncio.Queue()
+        pubsub = redis.pubsub()
+        await pubsub.subscribe(f"research:{job_id}:progress")
+
+        async def redis_listener():
+            try:
+                async for message in pubsub.listen():
+                    if message["type"] == "message":
+                        data = message["data"]
+                        if isinstance(data, bytes):
+                            data = data.decode()
+                        await queue.put(("message", data))
+            except asyncio.CancelledError:
+                pass
+            finally:
+                await pubsub.unsubscribe(f"research:{job_id}:progress")
+                await pubsub.close()
+
+        listener_task = asyncio.create_task(redis_listener())
+        try:
+            while True:
+                try:
+                    _, data = await asyncio.wait_for(queue.get(), timeout=SSE_KEEPALIVE_INTERVAL)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                yield f"data: {data}\n\n"
+                try:
+                    parsed = json.loads(data)
+                    if parsed.get("type") in ("complete", "error"):
+                        break
+                except json.JSONDecodeError:
+                    pass
+        finally:
+            listener_task.cancel()
+            try:
+                await listener_task
+            except asyncio.CancelledError:
+                pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/research/stream/{job_id}")
+async def stream_research_progress(
+    job_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """
+    SSE stream of progress events for a research job. Subscribe after starting a job
+    (e.g. from the research page) to receive plan_ready, probe_start, tool_call, etc.
+    Stream ends when type is "complete" or "error".
+    """
+    result = await db.execute(
+        select(ResearchJob)
+        .where(ResearchJob.id == job_id)
+        .where(ResearchJob.user_id == user_id)
+    )
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Research job not found")
+
+    async def event_generator():
+        queue = asyncio.Queue()
         pubsub = redis.pubsub()
         await pubsub.subscribe(f"research:{job_id}:progress")
 

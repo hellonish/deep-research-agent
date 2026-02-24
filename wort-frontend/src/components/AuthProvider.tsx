@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, AuthResponse } from '@/lib/types';
-import { fetchApi } from '@/lib/api';
+import { googleAuth } from '@/apis';
 
 interface AuthContextType {
     user: User | null;
@@ -52,10 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (credential: string) => {
         try {
             setIsLoading(true);
-            const res: AuthResponse = await fetchApi('/auth/google', {
-                method: 'POST',
-                body: JSON.stringify({ id_token: credential }),
-            });
+            const res: AuthResponse = await googleAuth(credential);
 
             setToken(res.access_token);
             setUser(res.user);

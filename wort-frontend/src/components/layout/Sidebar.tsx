@@ -19,7 +19,14 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { fetchApi } from '@/lib/api';
+import {
+    getChats,
+    getResearch,
+    deleteChat,
+    deleteResearch,
+    updateChatTitle,
+    updateResearchTitle,
+} from '@/apis';
 
 interface HistoryItem {
     id: string;
@@ -42,36 +49,29 @@ export function Sidebar() {
 
     const fetchHistory = () => {
         if (!token) return;
-        Promise.all([
-            fetchApi('/history/chats', { headers: { Authorization: `Bearer ${token}` } }),
-            fetchApi('/history/research', { headers: { Authorization: `Bearer ${token}` } }),
-        ])
+        Promise.all([getChats(), getResearch()])
             .then(([chatsData, researchData]) => {
                 const combined: HistoryItem[] = [];
-                if (chatsData) {
-                    (chatsData as any[]).forEach((c: any) => {
-                        combined.push({
-                            id: c.id,
-                            sessionId: c.id,
-                            title: c.title || 'New Chat',
-                            type: 'chat',
-                            date: new Date(c.updated_at || c.created_at),
-                            href: `/chat/${c.id}`,
-                        });
+                chatsData.forEach((c) => {
+                    combined.push({
+                        id: c.id,
+                        sessionId: c.id,
+                        title: c.title || 'New Chat',
+                        type: 'chat',
+                        date: new Date(c.updated_at || c.created_at || 0),
+                        href: `/chat/${c.id}`,
                     });
-                }
-                if (researchData) {
-                    (researchData as any[]).forEach((r: any) => {
-                        combined.push({
-                            id: r.id,
-                            sessionId: r.session_id,
-                            title: r.query || 'Research Job',
-                            type: 'research',
-                            date: new Date(r.created_at),
-                            href: `/research/${r.id}`,
-                        });
+                });
+                researchData.forEach((r) => {
+                    combined.push({
+                        id: r.id,
+                        sessionId: r.session_id ?? r.id,
+                        title: r.query || 'Research Job',
+                        type: 'research',
+                        date: new Date(r.created_at || 0),
+                        href: `/research/${r.id}`,
                     });
-                }
+                });
                 const uniqueMap = new Map<string, HistoryItem>();
                 combined.forEach((item) => {
                     if (!uniqueMap.has(item.sessionId) || item.type === 'research') {
@@ -94,10 +94,8 @@ export function Sidebar() {
         e.stopPropagation();
         if (!confirm('Delete this session? This cannot be undone.')) return;
         try {
-            await fetchApi(`/history/${type === 'chat' ? 'chats' : 'research'}/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            if (type === 'chat') await deleteChat(id);
+            else await deleteResearch(id);
             fetchHistory();
             if (pathname.includes(id)) router.push('/chat');
         } catch (err) {
@@ -112,11 +110,8 @@ export function Sidebar() {
             return;
         }
         try {
-            await fetchApi(`/history/${type === 'chat' ? 'chats' : 'research'}/${id}`, {
-                method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: editTitle.trim() }),
-            });
+            if (type === 'chat') await updateChatTitle(id, editTitle.trim());
+            else await updateResearchTitle(id, editTitle.trim());
             setEditingId(null);
             fetchHistory();
         } catch (err) {

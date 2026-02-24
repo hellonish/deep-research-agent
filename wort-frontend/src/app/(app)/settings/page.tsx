@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from '@/components/AuthProvider';
-import { fetchApi } from '@/lib/api';
+import { getKeyStatus, getAvailable, setKey, setModel } from '@/apis';
 import { KeyRound, Cpu, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -28,14 +28,14 @@ export default function SettingsPage() {
     }, [user?.selected_model]);
 
     useEffect(() => {
-        fetchApi('/models/key-status')
-            .then((r: { configured?: boolean }) => setApiKeyConfigured(r.configured ?? false))
+        getKeyStatus()
+            .then((r) => setApiKeyConfigured(r.configured ?? false))
             .catch(() => setApiKeyConfigured(false));
     }, []);
 
     useEffect(() => {
-        fetchApi('/models/available')
-            .then((r: { models?: ModelOption[] }) => setModels(r.models ?? []))
+        getAvailable()
+            .then((r) => setModels(r.models ?? []))
             .catch(() => {});
     }, []);
 
@@ -45,10 +45,7 @@ export default function SettingsPage() {
         setIsSavingKey(true);
         setKeyStatus(null);
         try {
-            await fetchApi('/models/set-key', {
-                method: 'POST',
-                body: JSON.stringify({ api_key: apiKey }),
-            });
+            await setKey(apiKey);
             setApiKeyConfigured(true);
             setKeyStatus('Key saved successfully.');
             setApiKey('');
@@ -64,10 +61,7 @@ export default function SettingsPage() {
         setIsSavingModel(true);
         setModelStatus(null);
         try {
-            await fetchApi('/models/set-model', {
-                method: 'POST',
-                body: JSON.stringify({ model_id: selectedModelId }),
-            });
+            await setModel(selectedModelId);
             setModelStatus('Default model updated.');
         } catch (err: unknown) {
             setModelStatus(err instanceof Error ? err.message : 'Failed to save.');

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from '@/components/AuthProvider';
-import { API_BASE, fetchApi } from '@/lib/api';
+import { getResearchResult, getChatMessages, streamChat } from '@/apis';
 import { Message } from '@/lib/types';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,24 +15,6 @@ import { ChartBlock } from '@/components/blocks/ChartBlock';
 import { CodeBlock } from '@/components/blocks/CodeBlock';
 import { SourceListBlock } from '@/components/blocks/SourceListBlock';
 import { ResearchEventTree } from '@/components/research/ResearchEventTree';
-
-interface ProgressEvent {
-    type: string;
-    topic?: string;
-    depth?: number;
-    message?: string;
-    report?: any;
-    error?: string;
-    data?: any;
-    count?: number;
-    probe?: string;
-    tool?: string;
-    query?: string;
-    node_id?: string;
-    probes?: { node_id: string; probe: string }[];
-    completed?: { node_id: string; probe: string }[];
-    total_in_level?: number;
-}
 
 export default function ResearchJobPage() {
     const params = useParams();
@@ -50,35 +32,36 @@ export default function ResearchJobPage() {
 
     const logsEndRef = useRef<HTMLDivElement>(null);
     const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-    const ws = useRef<WebSocket | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Auto-scroll logs
-    useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [logs]);
+    const fetchReport = async () => {
+        try {
+            const data = await getResearchResult(jobId);
+            if (data.session_id) setSessionId(data.session_id);
+            if (data.status === 'complete') {
+                setStatus('complete');
+                setReport(data.report);
+            } else if (data.status === 'failed') {
+                setStatus('failed');
+                setErrorMsg(data.error || 'System Failure');
+            }
+        } catch (err) {
+            console.error('Fetch report error:', err);
+        }
+    };
 
+    // Load initial state and poll when pending/running
     useEffect(() => {
         if (!jobId || !token) return;
 
         const init = async () => {
             try {
-                // Fetch initial status first
-                const data = await fetchApi(`/chat/research/result/${jobId}`);
+                const data = await getResearchResult(jobId);
                 if (data.session_id) {
                     setSessionId(data.session_id);
                     try {
-                        const historyData = await fetchApi(`/history/chats/${data.session_id}/messages`);
-                        if (Array.isArray(historyData)) {
-                            const msgs: Message[] = historyData.map((m: any) => ({
-                                id: m.id || `hist_${Math.random()}`,
-                                role: m.role === 'user' ? 'user' : 'assistant',
-                                content: m.content || '',
-                                mode: m.mode || 'chat',
-                                sources: m.sources || {},
-                                created_at: m.created_at || new Date().toISOString(),
-                            }));
-                            setSessionMessages(msgs);
-                        }
+                        const msgs = await getChatMessages(data.session_id);
+                        setSessionMessages(msgs);
                     } catch (historyErr) {
                         console.error('Failed to hydrate chat history:', historyErr);
                     }
@@ -87,121 +70,41 @@ export default function ResearchJobPage() {
                 if (data.status === 'complete') {
                     setStatus('complete');
                     setReport(data.report);
-                    return; // Skip WebSocket if already complete
-                } else if (data.status === 'failed') {
+                    return;
+                }
+                if (data.status === 'failed') {
                     setStatus('failed');
                     setErrorMsg(data.error || 'System Failure');
                     return;
                 }
 
-                // If pending/running, connect WebSocket
-                connectWebSocket();
+                setStatus('running');
+                addLog('System', 'Research in progress…', 0);
+                pollRef.current = setInterval(fetchReport, 2500);
             } catch (err) {
                 console.error('Failed to fetch initial status:', err);
-                connectWebSocket(); // Fallback to WS
+                setStatus('failed');
+                setErrorMsg('Failed to load job');
             }
-        };
-
-        const connectWebSocket = () => {
-            // WS URL calculation
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Fallback API_BASE parsing for WS
-            const apiHost = API_BASE.replace(/^https?:\/\//, '');
-            const wsUrl = `${wsProtocol}//${apiHost}/chat/research/stream/${jobId}?token=${token}`;
-
-            ws.current = new WebSocket(wsUrl);
-
-            ws.current.onopen = () => {
-                setStatus('running');
-                addLog('System', 'Connected to Orchestrator Node.', 0);
-            };
-
-            ws.current.onmessage = (event) => {
-                try {
-                    const data: ProgressEvent = JSON.parse(event.data);
-
-                    if (data.type === 'start') {
-                        addLog('Orchestrator', `Initializing traversal network for: ${data.topic}`, 0);
-                    } else if (data.type === 'phase_start') {
-                        addLog('Phase', data.message || `Starting phase: ${data.data?.phase}`, 0);
-                    } else                     if (data.type === 'plan_ready') {
-                        addLog('Planner', `Strategic plan formulated. Generated ${data.data?.count || data.count || ''} target vectors.`, 0);
-                    } else if (data.type === 'level_start') {
-                        const n = data.total_in_level ?? data.probes?.length ?? 0;
-                        const d = data.depth ?? 0;
-                        addLog('Researcher', `Researching ${n} topic${n !== 1 ? 's' : ''} (depth ${d})…`, d);
-                    } else if (data.type === 'level_complete') {
-                        const n = data.completed?.length ?? 0;
-                        const d = data.depth ?? 0;
-                        addLog('Reviewer', `Completed ${n} topic${n !== 1 ? 's' : ''} at depth ${d}.`, d);
-                    } else if (data.type === 'probe_start') {
-                        addLog('Researcher', `Deploying agent for probe: ${data.probe}`, data.depth || 1);
-                    } else if (data.type === 'tool_call') {
-                        const prefix = data.node_id != null ? `Node ${data.node_id}: ` : '';
-                        addLog('Tool', `${prefix}Executing ${data.tool}: ${data.query}`, data.depth ?? 2);
-                    } else if (data.type === 'thinking') {
-                        const prefix = data.node_id != null ? `Node ${data.node_id}: ` : '';
-                        addLog('LLM', `${prefix}${data.message || 'Analyzing findings for probe...'}`, data.depth ?? 2);
-                    } else if (data.type === 'probe_complete') {
-                        const prefix = data.node_id != null ? `Node ${data.node_id}: ` : '';
-                        addLog('Reviewer', `${prefix}Probe complete. Extracted knowledge.`, data.depth ?? 1);
-                    } else if (data.type === 'writing') {
-                        addLog('Publisher', `Compiling synthesized intelligence into final report structure.`, 0);
-                    } else if (data.type === 'complete') {
-                        setStatus('complete');
-                        // Always fetch the latest report from the API since WS might not send the full huge JSON
-                        fetchReport();
-                    } else if (data.type === 'error') {
-                        setStatus('failed');
-                        setErrorMsg(data.message || 'Unknown error occurred.');
-                        addLog('Error', data.message || 'System Failure', 0);
-                    } else if (data.message) {
-                        // Fallback generic info
-                        addLog('Info', data.message, data.depth || 0);
-                    }
-
-                } catch (err) {
-                    console.error('Failed to parse WS message', err);
-                }
-            };
-
-            ws.current.onclose = () => {
-                // If it closed and we aren't already complete/failed, we might have disconnected
-                setStatus((prev) => {
-                    if (prev === 'running' || prev === 'connecting') {
-                        // Attempt to fetch the final status via API just in case it finished while we disconnected
-                        fetchReport();
-                        return prev;
-                    }
-                    return prev;
-                });
-            };
         };
 
         init();
 
         return () => {
-            if (ws.current) {
-                ws.current.close();
+            if (pollRef.current) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
             }
         };
     }, [jobId, token]);
 
-
-    const fetchReport = async () => {
-        try {
-            const data = await fetchApi(`/chat/research/result/${jobId}`);
-            if (data.session_id) setSessionId(data.session_id);
-            if (data.status === 'complete') {
-                setStatus('complete');
-                setReport(data.report);
-            } else if (data.status === 'failed') {
-                setStatus('failed');
-            }
-        } catch (err) {
-            console.error('Fetch report error:', err);
+    // Stop polling when status becomes complete/failed (fetchReport updates status)
+    useEffect(() => {
+        if ((status === 'complete' || status === 'failed') && pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
         }
-    };
+    }, [status]);
 
     const addLog = (type: string, text: string, depth: number) => {
         setLogs(prev => [...prev, {
@@ -226,11 +129,10 @@ export default function ResearchJobPage() {
             { id: streamMsgId, role: 'assistant', content: '', mode: 'chat', sources: {}, created_at: new Date().toISOString() },
         ]);
         try {
-            const response = await fetch(`${API_BASE}/chat/stream`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ message: userMsg, session_id: sessionId, mode: 'chat' }),
-            });
+            const response = await streamChat(
+                { message: userMsg, session_id: sessionId, mode: 'chat' },
+                token
+            );
             if (!response.ok) throw new Error('Chat API Error');
             if (!response.body) throw new Error('No body');
             const reader = response.body.getReader();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from '@/components/AuthProvider';
-import { fetchApi, API_BASE } from '@/lib/api';
+import { upload } from '@/apis';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, File, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -51,14 +51,8 @@ export default function IngestPage() {
         setUploading(true);
         setResult(null);
 
-        const formData = new FormData();
-        formData.append('file', fileToUpload);
-
         try {
-            const data = await fetchApi('/ingest/upload', {
-                method: 'POST',
-                body: formData,
-            });
+            const data = await upload(fileToUpload);
 
             setResult({
                 success: true,

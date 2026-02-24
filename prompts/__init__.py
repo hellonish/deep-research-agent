@@ -5,7 +5,8 @@ from .get_synthesis import get_synthesis
 from .get_write import get_write
 from .get_write_node import get_write_node
 from .get_executive_summary import get_executive_summary
-from .get_chat_system import get_chat_system_prompt_base
+from .get_chat_system import get_chat_system_prompt_base, get_chat_research_context_suffix
+from .get_web_search_decision import get_web_search_decision
 
 __all__ = [
     "get_plan",
@@ -16,4 +17,6 @@ __all__ = [
     "get_write_node",
     "get_executive_summary",
     "get_chat_system_prompt_base",
+    "get_chat_research_context_suffix",
+    "get_web_search_decision",
 ]

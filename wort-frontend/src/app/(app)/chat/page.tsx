@@ -1,7 +1,13 @@
 "use client";
 
 import { useAuth } from '@/components/AuthProvider';
-import { API_BASE, fetchApi } from '@/lib/api';
+import {
+    getAvailable,
+    getChatMessages,
+    startResearch,
+    upload,
+    streamChat,
+} from '@/apis';
 import { Message } from '@/lib/types';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import {
@@ -102,8 +108,8 @@ export default function ChatPage() {
 
     useEffect(() => {
         if (!token) return;
-        fetchApi('/models/available')
-            .then((r: { models?: ModelOption[] }) => setModels(r.models || []))
+        getAvailable()
+            .then((r) => setModels(r.models ?? []))
             .catch(() => {});
         if (user?.selected_model) setSelectedModelId(user.selected_model);
     }, [token, user?.selected_model]);
@@ -119,18 +125,7 @@ export default function ChatPage() {
     const loadHistory = async () => {
         if (!chatId) return;
         try {
-            const data = await fetchApi(`/history/chats/${chatId}/messages`);
-            const list = Array.isArray(data) ? data : [];
-            const sorted = list
-                .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-                .map((m: any) => ({
-                    id: m.id,
-                    role: m.role === 'assistant' ? 'assistant' : 'user',
-                    content: m.content ?? '',
-                    mode: m.mode ?? 'chat',
-                    sources: m.sources && typeof m.sources === 'object' ? m.sources : {},
-                    created_at: m.created_at ?? new Date().toISOString(),
-                }));
+            const sorted = await getChatMessages(chatId);
             setMessages(sorted);
         } catch (err) {
             console.error('Failed to load history', err);
@@ -155,19 +150,19 @@ export default function ChatPage() {
             if (!hasText) return;
             setIsStreaming(true);
             try {
-                const data = await fetchApi('/chat/research', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                const data = await startResearch(
+                    {
                         query: userMessage,
-                        model_id: selectedModelId || undefined,
+                        model_id: selectedModelId ?? undefined,
                         config: {
                             num_plan_steps: researchParams.num_plan_steps,
                             max_depth: researchParams.max_depth,
                             max_probes: researchParams.max_probes,
                             max_tool_pairs: researchParams.max_tool_pairs,
                         },
-                    }),
-                });
+                    },
+                    token
+                );
                 if (data.job_id) router.push(`/research/${data.job_id}`);
             } catch (err) {
                 console.error('Failed to start research', err);
@@ -181,7 +176,7 @@ export default function ChatPage() {
                 const formData = new FormData();
                 formData.append('file', file);
                 try {
-                    await fetchApi('/ingest/upload', { method: 'POST', body: formData });
+                    await upload(file);
                 } catch (err) {
                     console.error('Ingest failed for', file.name, err);
                 }
@@ -200,16 +195,15 @@ export default function ChatPage() {
         ]);
 
         try {
-            const response = await fetch(`${API_BASE}/chat/stream`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
+            const response = await streamChat(
+                {
                     message: userMessage,
                     session_id: chatId || null,
                     mode: isWebMode ? 'web' : 'chat',
-                    model_id: selectedModelId || undefined,
-                }),
-            });
+                    model_id: selectedModelId ?? undefined,
+                },
+                token
+            );
             if (!response.ok) throw new Error(`Chat API error: ${response.statusText}`);
             if (!response.body) throw new Error('No response body');
 

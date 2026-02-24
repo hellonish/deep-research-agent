@@ -11,7 +11,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,23 +19,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.database import async_session, get_db
 from app.db.models import User, ChatSession, Message, ResearchJob
-from app.core.dependencies import get_current_user, decode_token_user_id
+from app.core.dependencies import get_current_user
 from app.middleware.rate_limit import check_rate_limit
-from app.schemas.chat import ChatRequest, ChatCreateResponse
+from app.schemas.chat import ChatRequest, ChatCreateResponse, WebSearchDecision
 from app.schemas.research import ResearchRequest, ResearchResponse
 from app.services.api_key_service import resolve_api_key
 from app.services.memory_service import MemoryService, get_redis
 from app.services.research_service import run_research_job
 from llm.router import get_llm_client
-from prompts import get_chat_system_prompt_base
+from prompts import get_chat_system_prompt_base, get_chat_research_context_suffix, get_web_search_decision
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 
-# Session history and user context limits
 SESSION_HISTORY_LIMIT = 50
-RECENT_SESSIONS_LIMIT = 5
-RECENT_RESEARCH_LIMIT = 3
 
 
 # ── Helper: resolve model ID ────────────────────────────────────────
@@ -87,55 +84,6 @@ async def _get_session_history(
     rows = result.scalars().all()
     messages = list(reversed(rows))  # Chronological for prompt
     return [{"role": m.role, "content": m.content or ""} for m in messages]
-
-
-# ── Helper: long-term user context ──────────────────────────────────
-
-async def _get_user_context(user_id: str, db: AsyncSession) -> str:
-    """Build a short user context block: preferences, facts, recent activity."""
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        return ""
-    parts = []
-    # Preferences / identity from User
-    if user.name:
-        parts.append(f"User's name: {user.name}")
-    if user.selected_model:
-        parts.append(f"Preferred model: {user.selected_model}")
-    meta = getattr(user, "metadata_", None) or {}
-    if isinstance(meta, dict):
-        prefs = meta.get("preferences") or {}
-        if prefs:
-            parts.append("Preferences: " + ", ".join(f"{k}={v}" for k, v in prefs.items()))
-        facts = meta.get("facts") or []
-        if facts:
-            parts.append("Known facts about user: " + "; ".join(facts[:10]))
-    # Recent activity: last K sessions and research jobs
-    sess_result = await db.execute(
-        select(ChatSession)
-        .where(ChatSession.user_id == user_id)
-        .order_by(ChatSession.updated_at.desc())
-        .limit(RECENT_SESSIONS_LIMIT)
-    )
-    sessions = sess_result.scalars().all()
-    if sessions:
-        activity = [f"- {s.title or 'Chat'} (updated {s.updated_at})" for s in sessions if s.title]
-        if activity:
-            parts.append("Recent sessions:\n" + "\n".join(activity[:RECENT_SESSIONS_LIMIT]))
-    job_result = await db.execute(
-        select(ResearchJob)
-        .where(ResearchJob.user_id == user_id)
-        .order_by(ResearchJob.created_at.desc())
-        .limit(RECENT_RESEARCH_LIMIT)
-    )
-    jobs = job_result.scalars().all()
-    if jobs:
-        job_lines = [f"- {j.query[:80]}... ({j.status})" if len(j.query) > 80 else f"- {j.query} ({j.status})" for j in jobs]
-        parts.append("Recent research:\n" + "\n".join(job_lines))
-    if not parts:
-        return ""
-    return "User context (use for personalization and continuity):\n" + "\n".join(parts)
 
 
 # ── Helper: get research report context for follow-ups ───────────────
@@ -212,8 +160,6 @@ async def chat_stream(
 
     # Load session history from PostgreSQL (single source of truth for prompt)
     history = await _get_session_history(session_id, user_id, db, limit=SESSION_HISTORY_LIMIT)
-    # Long-term user context (preferences, facts, recent activity)
-    user_context = await _get_user_context(user_id, db)
 
     async def event_stream():
         web_context = ""
@@ -223,15 +169,26 @@ async def chat_stream(
         yield f"event: status\ndata: {json.dumps({'phase': 'retrieving_context'})}\n\n"
         research_context = await _get_research_context(session_id, db)
 
-        # ── Phase 2: Web search when user chose web mode OR when this is a follow-up (session has report) ──────
-        use_web = req.mode == "web" or bool(research_context)
-        if use_web:
+        # ── Phase 2: LLM decides if web search is needed and what query to run ──────
+        try:
+            decision = get_web_search_decision(
+                req.message,
+                has_research_context=bool(research_context),
+                llm_client=llm,
+            )
+        except Exception as e:
+            logger.warning("Web search decision LLM call failed: %s", e)
+            decision = WebSearchDecision(use_web=False, search_query=None)
+
+        use_web = decision.use_web and (decision.search_query or "").strip()
+        search_query = (decision.search_query or req.message).strip() if use_web else ""
+
+        if use_web and search_query:
             yield f"event: status\ndata: {json.dumps({'phase': 'searching_web'})}\n\n"
             try:
                 from tools.tools import ToolExecutor
                 executor = ToolExecutor()
-                results = await executor.execute("tavily_search", query=req.message)
-                # ToolExecutor returns list of Document (content, metadata with url)
+                results = await executor.execute("tavily_search", query=search_query)
                 chunks = []
                 if isinstance(results, list):
                     for r in results[:5]:
@@ -248,23 +205,10 @@ async def chat_stream(
         # ── Phase 3: LLM streaming ──────────────────────────────
         yield f"event: status\ndata: {json.dumps({'phase': 'thinking'})}\n\n"
         system_prompt = get_chat_system_prompt_base()
-        if user_context:
-            system_prompt += f"\n\n{user_context}"
         if web_context:
             system_prompt += f"\n\nRelevant web search results:\n{web_context}"
         if research_context:
-            system_prompt += (
-                f"\n\nThe user previously conducted deep research in this session. "
-                f"Here is the full report:\n{research_context}\n\n"
-                f"Answer follow-up questions using this report as your primary source. "
-            )
-            if web_context:
-                system_prompt += (
-                    "You also have fresh web search results above; use them to supplement or update the report when relevant and cite those sources. "
-                )
-            system_prompt += (
-                f"If the answer is NOT in the report or search results, say so and suggest they use the app's Research mode to run a new report—do not claim you will run it yourself."
-            )
+            system_prompt += get_chat_research_context_suffix(research_context, has_web_context=bool(web_context))
 
         prompt = _build_chat_prompt(history, req.message)
         full_response = ""
@@ -284,6 +228,7 @@ async def chat_stream(
         # Save to PostgreSQL (cold storage)
         db.add(Message(session_id=session_id, role="user", content=req.message, mode=req.mode))
         db.add(Message(session_id=session_id, role="assistant", content=full_response, mode=req.mode, sources=sources or None))
+
         # Touch session so it appears at top of "recent" in sidebar
         session_result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
         session_result.scalar_one().updated_at = datetime.now(timezone.utc)
@@ -296,14 +241,21 @@ async def chat_stream(
 
 # ── Research (part of chat: jobs live in a session, report used for follow-ups) ──
 
-@router.post("/research", response_model=ResearchResponse)
+SSE_KEEPALIVE_INTERVAL = 15
+
+
+@router.post("/research")
 async def start_research(
     req: ResearchRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     redis=Depends(get_redis),
 ):
-    """Start a deep research job in the current (or new) chat session. Returns job_id."""
+    """
+    Start a deep research job and return an SSE stream.
+    First event: {"type": "started", "job_id": "...", "session_id": "..."}.
+    Then progress events from the orchestrator; stream ends on complete/error.
+    """
     await check_rate_limit(user_id, redis, "research", max_per_hour=10)
 
     session_id = req.session_id
@@ -340,7 +292,60 @@ async def start_research(
 
     asyncio.create_task(_run_with_logging())
 
-    return ResearchResponse(job_id=job.id, session_id=session_id, status="pending")
+    job_id = job.id
+
+    async def event_generator():
+        yield f"data: {json.dumps({'type': 'started', 'job_id': job_id, 'session_id': session_id})}\n\n"
+
+        queue: asyncio.Queue = asyncio.Queue()
+        pubsub = redis.pubsub()
+        await pubsub.subscribe(f"research:{job_id}:progress")
+
+        async def redis_listener():
+            try:
+                async for message in pubsub.listen():
+                    if message["type"] == "message":
+                        data = message["data"]
+                        if isinstance(data, bytes):
+                            data = data.decode()
+                        await queue.put(("message", data))
+            except asyncio.CancelledError:
+                pass
+            finally:
+                await pubsub.unsubscribe(f"research:{job_id}:progress")
+                await pubsub.close()
+
+        listener_task = asyncio.create_task(redis_listener())
+        try:
+            while True:
+                try:
+                    _, data = await asyncio.wait_for(queue.get(), timeout=SSE_KEEPALIVE_INTERVAL)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                yield f"data: {data}\n\n"
+                try:
+                    parsed = json.loads(data)
+                    if parsed.get("type") in ("complete", "error"):
+                        break
+                except json.JSONDecodeError:
+                    pass
+        finally:
+            listener_task.cancel()
+            try:
+                await listener_task
+            except asyncio.CancelledError:
+                pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/research/result/{job_id}")
@@ -369,52 +374,3 @@ async def get_research_result(
         "created_at": str(job.created_at),
         "completed_at": str(job.completed_at) if job.completed_at else None,
     }
-
-
-@router.websocket("/research/stream/{job_id}")
-async def research_stream(ws: WebSocket, job_id: str, redis=Depends(get_redis)):
-    """WebSocket stream of research progress events for the given job."""
-    token = ws.query_params.get("token")
-    user_id = decode_token_user_id(token or "")
-    if not user_id:
-        await ws.close(code=4001)
-        return
-
-    async with async_session() as db:
-        result = await db.execute(
-            select(ResearchJob).where(ResearchJob.id == job_id).where(ResearchJob.user_id == user_id)
-        )
-        job = result.scalar_one_or_none()
-    if not job:
-        await ws.close(code=4004)
-        return
-
-    await ws.accept()
-
-    # If job already finished (e.g. failed before any event was published), send status immediately
-    if job.status == "failed":
-        await ws.send_text(json.dumps({"type": "error", "message": job.error_message or "Job failed."}))
-        return
-    if job.status == "complete":
-        blocks = len(job.report_json.get("blocks", [])) if isinstance(job.report_json, dict) else 0
-        await ws.send_text(json.dumps({"type": "complete", "job_id": job_id, "blocks_count": blocks}))
-        return
-
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(f"research:{job_id}:progress")
-
-    try:
-        async for message in pubsub.listen():
-            if message["type"] == "message":
-                data = message["data"]
-                if isinstance(data, bytes):
-                    data = data.decode()
-                await ws.send_text(data)
-                parsed = json.loads(data)
-                if parsed.get("type") in ("complete", "error"):
-                    break
-    except WebSocketDisconnect:
-        pass
-    finally:
-        await pubsub.unsubscribe(f"research:{job_id}:progress")
-        await pubsub.close()
